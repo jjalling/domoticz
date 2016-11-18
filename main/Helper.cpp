@@ -24,15 +24,12 @@ void StringSplit(std::string str, const std::string &delim, std::vector<std::str
 {
 	results.clear();
 	size_t cutAt;
-	while( (cutAt = str.find_first_of(delim)) != str.npos )
+	while( (cutAt = str.find(delim)) != std::string::npos )
 	{
-		if(cutAt > 0)
-		{
-			results.push_back(str.substr(0,cutAt));
-		}
-		str = str.substr(cutAt+1);
+		results.push_back(str.substr(0,cutAt));
+		str = str.substr(cutAt+ delim.size());
 	}
-	if(str.length() > 0)
+	if (!str.empty())
 	{
 		results.push_back(str);
 	}
