@@ -10,8 +10,6 @@
 #include "../webserver/cWebem.h"
 #include "../json/json.h"
 #include "boost/date_time/gregorian/gregorian.hpp"
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
 
 CScheduler::CScheduler(void)
 {
@@ -369,21 +367,10 @@ void CScheduler::SetSunRiseSetTimers(const std::string &sSunRise, const std::str
 		min = atoi(sSunRise.substr(3, 2).c_str());
 		sec = atoi(sSunRise.substr(6, 2).c_str());
 
-		int isdst = ltime.tm_isdst;
-		bool goodtime = false;
-		while (!goodtime) {
-			ltime.tm_isdst = isdst;
-			ltime.tm_hour = hour;
-			ltime.tm_min = min;
-			ltime.tm_sec = sec;
-			temptime = mktime(&ltime);
-			goodtime = (ltime.tm_isdst == isdst);
-			isdst = ltime.tm_isdst;
-			if (!goodtime){
-				localtime_r(&atime, &ltime);
-			}
-		}
-
+		ltime.tm_hour = hour;
+		ltime.tm_min = min;
+		ltime.tm_sec = sec;
+		temptime = mktime(&ltime);
 		if ((m_tSunRise != temptime) && (temptime != 0))
 		{
 			if (m_tSunRise == 0)
@@ -391,7 +378,6 @@ void CScheduler::SetSunRiseSetTimers(const std::string &sSunRise, const std::str
 			m_tSunRise = temptime;
 		}
 
-		//GB3: no DST jump between sunrise and sunset
 		hour = atoi(sSunSet.substr(0, 2).c_str());
 		min = atoi(sSunSet.substr(3, 2).c_str());
 		sec = atoi(sSunSet.substr(6, 2).c_str());
@@ -418,8 +404,6 @@ bool CScheduler::AdjustScheduleItem(tScheduleItem *pItem, bool bForceAddDay)
 	struct tm ltime;
 	localtime_r(&atime, &ltime);
 	ltime.tm_sec = 0;
-	int isdst = ltime.tm_isdst;
-	bool goodtime = false;
 
 	unsigned long HourMinuteOffset = (pItem->startHour * 3600) + (pItem->startMin * 60);
 
@@ -445,33 +429,18 @@ bool CScheduler::AdjustScheduleItem(tScheduleItem *pItem, bool bForceAddDay)
 		(pItem->timerType == TTYPE_WEEKSODD) ||
 		(pItem->timerType == TTYPE_WEEKSEVEN))
 	{
-		while (!goodtime) {
-			ltime.tm_isdst = isdst;
-			ltime.tm_hour = pItem->startHour;
-			ltime.tm_min = pItem->startMin;
-			ltime.tm_sec = roffset * 60;
-			rtime = mktime(&ltime);
-			goodtime = (ltime.tm_isdst == isdst);
-			isdst = ltime.tm_isdst;
-			if (!goodtime) {
-				localtime_r(&atime, &ltime);
-			}
-		}
+		ltime.tm_hour = pItem->startHour;
+		ltime.tm_min = pItem->startMin;
+		rtime = mktime(&ltime) + (roffset * 60);
 	}
 	else if (pItem->timerType == TTYPE_FIXEDDATETIME)
 	{
-		while (!goodtime) {
-			ltime.tm_isdst = isdst;
-			ltime.tm_year = pItem->startYear - 1900;
-			ltime.tm_mon = pItem->startMonth - 1;
-			ltime.tm_mday = pItem->startDay;
-			ltime.tm_hour = pItem->startHour;
-			ltime.tm_min = pItem->startMin;
-			ltime.tm_sec = roffset * 60;
-			rtime = mktime(&ltime);
-			goodtime = (ltime.tm_isdst == isdst);
-			isdst = ltime.tm_isdst;
-		}
+		ltime.tm_year = pItem->startYear - 1900;
+		ltime.tm_mon = pItem->startMonth - 1;
+		ltime.tm_mday = pItem->startDay;
+		ltime.tm_hour = pItem->startHour;
+		ltime.tm_min = pItem->startMin;
+		rtime = mktime(&ltime) + (roffset * 60);
 		if (rtime < atime)
 			return false; //past date/time
 		pItem->startTime = rtime;
@@ -503,44 +472,28 @@ bool CScheduler::AdjustScheduleItem(tScheduleItem *pItem, bool bForceAddDay)
 	}
 	else if (pItem->timerType == TTYPE_MONTHLY)
 	{
-		while (!goodtime) {
-			ltime.tm_isdst = isdst;
-			ltime.tm_mday = pItem->MDay;
-			ltime.tm_hour = pItem->startHour;
-			ltime.tm_min = pItem->startMin;
-			//if mday exceeds max days in month, find next month with this amount of days
-			while(ltime.tm_mday > boost::gregorian::gregorian_calendar::end_of_month_day(ltime.tm_year + 1900, ltime.tm_mon + 1))
+		ltime.tm_mday = pItem->MDay;
+		ltime.tm_hour = pItem->startHour;
+		ltime.tm_min = pItem->startMin;
+		//if mday exceeds max days in month, find next month with this amount of days
+		while(ltime.tm_mday > boost::gregorian::gregorian_calendar::end_of_month_day(ltime.tm_year + 1900, ltime.tm_mon + 1))
+		{
+			ltime.tm_mon++;
+			if (ltime.tm_mon > 11)
 			{
-				ltime.tm_mon++;
-				if (ltime.tm_mon > 11)
-				{
-					ltime.tm_mon = 0;
-					ltime.tm_year++;
-				}
+				ltime.tm_mon = 0;
+				ltime.tm_year++;
 			}
-			ltime.tm_sec = roffset * 60;
-			rtime = mktime(&ltime);
-			goodtime = (ltime.tm_isdst == isdst);
-			isdst = ltime.tm_isdst;
 		}
+		rtime = mktime(&ltime) + (roffset * 60);
 		if (rtime < atime) //past date/time
 		{
 			//schedule for next month
 			boost::gregorian::month_iterator m_itr(boost::gregorian::date(ltime.tm_year + 1900, ltime.tm_mon + 1, ltime.tm_mday));
 			++m_itr;
-			goodtime = false;
-			while (!goodtime) {
-				ltime.tm_isdst = isdst;
-				ltime.tm_year = m_itr->year() - 1900;
-				ltime.tm_mon = m_itr->month() - 1;
-				ltime.tm_mday = pItem->MDay;
-				ltime.tm_hour = pItem->startHour;
-				ltime.tm_min = pItem->startMin;
-				ltime.tm_sec = roffset * 60;
-				rtime = mktime(&ltime);
-				goodtime = (ltime.tm_isdst == isdst);
-				isdst = ltime.tm_isdst;
-			}
+			ltime.tm_mon = m_itr->month() - 1;
+			ltime.tm_year = m_itr->year() - 1900;
+			rtime = mktime(&ltime) + (roffset * 60);
 		}
 
 		pItem->startTime = rtime;
@@ -548,6 +501,9 @@ bool CScheduler::AdjustScheduleItem(tScheduleItem *pItem, bool bForceAddDay)
 	}
 	else if (pItem->timerType == TTYPE_MONTHLY_WD)
 	{
+		ltime.tm_hour = pItem->startHour;
+		ltime.tm_min = pItem->startMin;
+
 		//pItem->Days: mon=1 .. sat=32, sun=64
 		//convert to : sun=0, mon=1 .. sat=6
 		int daynum = (int)log2(pItem->Days) + 1;
@@ -561,42 +517,18 @@ bool CScheduler::AdjustScheduleItem(tScheduleItem *pItem, bool bForceAddDay)
 		nth_dow ndm(Occurence, Day, Month);
 		boost::gregorian::date d = ndm.get_date(ltime.tm_year + 1900);
 
-		while (!goodtime) {
-			ltime.tm_isdst = isdst;
-			ltime.tm_mday = d.day();
-			ltime.tm_hour = pItem->startHour;
-			ltime.tm_min = pItem->startMin;
-			ltime.tm_sec = roffset * 60;
-			rtime = mktime(&ltime);
-			goodtime = (ltime.tm_isdst == isdst);
-			isdst = ltime.tm_isdst;
-			if (!goodtime) {
-				localtime_r(&atime, &ltime);
-			}
-		}
+		ltime.tm_mday = d.day();
+		rtime = mktime(&ltime) + (roffset * 60);
 
 		if (rtime < atime) //past date/time
 		{
 			//schedule for next month
-			Month = static_cast<boost::gregorian::months_of_year>(ltime.tm_mon + 2);
+			ltime.tm_mon++;
+			Month = static_cast<boost::gregorian::months_of_year>(ltime.tm_mon + 1);
 			nth_dow ndm(Occurence, Day, Month);
 			boost::gregorian::date d = ndm.get_date(ltime.tm_year + 1900);
-
-			goodtime = false;
-			while (!goodtime) {
-				ltime.tm_isdst = isdst;
-				ltime.tm_mon++;
-				ltime.tm_mday = d.day();
-				ltime.tm_hour = pItem->startHour;
-				ltime.tm_min = pItem->startMin;
-				ltime.tm_sec = roffset * 60;
-				rtime = mktime(&ltime);
-				goodtime = (ltime.tm_isdst == isdst);
-				isdst = ltime.tm_isdst;
-				if (!goodtime) {
-					localtime_r(&atime, &ltime);
-				}
-			}
+			ltime.tm_mday = d.day();
+			rtime = mktime(&ltime) + (roffset * 60);
 		}
 
 		pItem->startTime = rtime;
@@ -604,50 +536,23 @@ bool CScheduler::AdjustScheduleItem(tScheduleItem *pItem, bool bForceAddDay)
 	}
 	else if (pItem->timerType == TTYPE_YEARLY)
 	{
-		while (!goodtime) {
-			ltime.tm_isdst = isdst;
-			ltime.tm_mon = pItem->Month - 1;
-			ltime.tm_mday = pItem->MDay;
-			//if mday exceeds max days in month, find next year with this amount of days
-			while (ltime.tm_mday > boost::gregorian::gregorian_calendar::end_of_month_day(ltime.tm_year + 1900, ltime.tm_mon + 1))
-			{
-				ltime.tm_year++;
-			}
-			ltime.tm_hour = pItem->startHour;
-			ltime.tm_min = pItem->startMin;
-			ltime.tm_sec = roffset * 60;
-			rtime = mktime(&ltime);
-			goodtime = (ltime.tm_isdst == isdst);
-			isdst = ltime.tm_isdst;
-			if (!goodtime) {
-				localtime_r(&atime, &ltime);
-			}
+		ltime.tm_mday = pItem->MDay;
+		ltime.tm_mon = pItem->Month - 1;
+		ltime.tm_hour = pItem->startHour;
+		ltime.tm_min = pItem->startMin;
+		//if mday exceeds max days in month, find next year with this amount of days
+		while (ltime.tm_mday > boost::gregorian::gregorian_calendar::end_of_month_day(ltime.tm_year + 1900, ltime.tm_mon + 1))
+		{
+			ltime.tm_year++;
 		}
+		rtime = mktime(&ltime) + (roffset * 60);
 		if (rtime < atime) //past date/time
 		{
 			//schedule for next year
 			boost::gregorian::year_iterator m_itr(boost::gregorian::date(ltime.tm_year + 1900, ltime.tm_mon + 1, ltime.tm_mday));
 			++m_itr;
-			while (!goodtime) {
-				ltime.tm_isdst = isdst;
-				ltime.tm_year = m_itr->year() - 1900;
-				ltime.tm_mon = pItem->Month - 1;
-				ltime.tm_mday = pItem->MDay;
-				//GB3: may seem silly to repeat this loop, but by doing so this should also work for Feb 29
-				while (ltime.tm_mday > boost::gregorian::gregorian_calendar::end_of_month_day(ltime.tm_year + 1900, ltime.tm_mon + 1))
-				{
-					ltime.tm_year++;
-				}
-				ltime.tm_hour = pItem->startHour;
-				ltime.tm_min = pItem->startMin;
-				ltime.tm_sec = roffset * 60;
-				rtime = mktime(&ltime);
-				goodtime = (ltime.tm_isdst == isdst);
-				isdst = ltime.tm_isdst;
-				if (!goodtime) {
-					localtime_r(&atime, &ltime);
-				}
-			}
+			ltime.tm_year = m_itr->year() - 1900;
+			rtime = mktime(&ltime) + (roffset * 60);
 		}
 
 		pItem->startTime = rtime;
@@ -655,6 +560,10 @@ bool CScheduler::AdjustScheduleItem(tScheduleItem *pItem, bool bForceAddDay)
 	}
 	else if (pItem->timerType == TTYPE_YEARLY_WD)
 	{
+		ltime.tm_hour = pItem->startHour;
+		ltime.tm_min = pItem->startMin;
+		ltime.tm_mon = pItem->Month - 1;
+
 		//pItem->Days: mon=1 .. sat=32, sun=64
 		//convert to : sun=0, mon=1 .. sat=6
 		int daynum = (int)log2(pItem->Days) + 1;
@@ -668,40 +577,15 @@ bool CScheduler::AdjustScheduleItem(tScheduleItem *pItem, bool bForceAddDay)
 		nth_dow ndm(Occurence, Day, Month);
 		boost::gregorian::date d = ndm.get_date(ltime.tm_year + 1900);
 
-		while (!goodtime) {
-			ltime.tm_isdst = isdst;
-			ltime.tm_mon = pItem->Month - 1;
-			ltime.tm_mday = d.day();
-			ltime.tm_hour = pItem->startHour;
-			ltime.tm_min = pItem->startMin;
-			ltime.tm_sec = roffset * 60;
-			rtime = mktime(&ltime);
-			goodtime = (ltime.tm_isdst == isdst);
-			isdst = ltime.tm_isdst;
-			if (!goodtime) {
-				localtime_r(&atime, &ltime);
-			}
-		}
+		ltime.tm_mday = d.day();
+		rtime = mktime(&ltime) + (roffset * 60);
 
 		if (rtime < atime) //past date/time
 		{
 			//schedule for next year
-			boost::gregorian::date d = ndm.get_date(ltime.tm_year + 1901);
-			while (!goodtime) {
-				ltime.tm_isdst = isdst;
-				ltime.tm_year++;
-				ltime.tm_mon = pItem->Month - 1;
-				ltime.tm_mday = d.day();
-				ltime.tm_hour = pItem->startHour;
-				ltime.tm_min = pItem->startMin;
-				ltime.tm_sec = roffset * 60;
-				rtime = mktime(&ltime);
-				goodtime = (ltime.tm_isdst == isdst);
-				isdst = ltime.tm_isdst;
-				if (!goodtime) {
-					localtime_r(&atime, &ltime);
-				}
-			}
+			ltime.tm_year++;
+			boost::gregorian::date d = ndm.get_date(ltime.tm_year + 1900);
+			ltime.tm_mday = d.day();
 			rtime = mktime(&ltime) + (roffset * 60);
 		}
 
@@ -843,11 +727,11 @@ void CScheduler::CheckSchedules()
 				strftime(ltimeBuf, sizeof(ltimeBuf), "%Y-%m-%d %H:%M:%S", &ltime);
 
 				if (itt->bIsScene == true)
-					_log.Log(LOG_STATUS, "Schedule item started! Name: %s, Type: %s, SceneID: %" PRIu64 ", Time: %s", itt->DeviceName.c_str(), Timer_Type_Desc(itt->timerType), itt->RowID, ltimeBuf);
+					_log.Log(LOG_STATUS, "Schedule item started! Name: %s, Type: %s, SceneID: %llu, Time: %s", itt->DeviceName.c_str(), Timer_Type_Desc(itt->timerType), itt->RowID, ltimeBuf);
 				else if (itt->bIsThermostat == true)
-					_log.Log(LOG_STATUS, "Schedule item started! Name: %s, Type: %s, ThermostatID: %" PRIu64 ", Time: %s", itt->DeviceName.c_str(), Timer_Type_Desc(itt->timerType), itt->RowID, ltimeBuf);
+					_log.Log(LOG_STATUS, "Schedule item started! Name: %s, Type: %s, ThermostatID: %llu, Time: %s", itt->DeviceName.c_str(), Timer_Type_Desc(itt->timerType), itt->RowID, ltimeBuf);
 				else
-					_log.Log(LOG_STATUS, "Schedule item started! Name: %s, Type: %s, DevID: %" PRIu64 ", Time: %s", itt->DeviceName.c_str(), Timer_Type_Desc(itt->timerType), itt->RowID, ltimeBuf);
+					_log.Log(LOG_STATUS, "Schedule item started! Name: %s, Type: %s, DevID: %llu, Time: %s", itt->DeviceName.c_str(), Timer_Type_Desc(itt->timerType), itt->RowID, ltimeBuf);
 				std::string switchcmd = "";
 				if (itt->timerCmd == TCMD_ON)
 					switchcmd = "On";
@@ -874,7 +758,7 @@ void CScheduler::CheckSchedules()
 */
 						if (!m_mainworker.SwitchScene(itt->RowID, switchcmd))
 						{
-							_log.Log(LOG_ERROR, "Error switching Scene command, SceneID: %" PRIu64 ", Time: %s", itt->RowID, ltimeBuf);
+							_log.Log(LOG_ERROR, "Error switching Scene command, SceneID: %llu, Time: %s", itt->RowID, ltimeBuf);
 						}
 					}
 					else if (itt->bIsThermostat == true)
@@ -883,14 +767,14 @@ void CScheduler::CheckSchedules()
 						sstr << itt->RowID;
 						if (!m_mainworker.SetSetPoint(sstr.str(), itt->Temperature))
 						{
-							_log.Log(LOG_ERROR, "Error setting thermostat setpoint, ThermostatID: %" PRIu64 ", Time: %s", itt->RowID, ltimeBuf);
+							_log.Log(LOG_ERROR, "Error setting thermostat setpoint, ThermostatID: %llu, Time: %s", itt->RowID, ltimeBuf);
 						}
 					}
 					else
 					{
 						//Get SwitchType
 						std::vector<std::vector<std::string> > result;
-						result = m_sql.safe_query("SELECT Type,SubType,SwitchType FROM DeviceStatus WHERE (ID == %" PRIu64 ")",
+						result = m_sql.safe_query("SELECT Type,SubType,SwitchType FROM DeviceStatus WHERE (ID == %llu)",
 							itt->RowID);
 						if (result.size() > 0)
 						{
@@ -927,7 +811,7 @@ void CScheduler::CheckSchedules()
 							}
 							if (!m_mainworker.SwitchLight(itt->RowID, switchcmd, ilevel, itt->Hue,false,0))
 							{
-								_log.Log(LOG_ERROR, "Error sending switch command, DevID: %" PRIu64 ", Time: %s", itt->RowID, ltimeBuf);
+								_log.Log(LOG_ERROR, "Error sending switch command, DevID: %llu, Time: %s", itt->RowID, ltimeBuf);
 							}
 						}
 					}
@@ -1140,7 +1024,7 @@ namespace http {
 		}
 		void CWebServer::RType_Timers(WebEmSession & session, const request& req, Json::Value &root)
 		{
-			uint64_t idx = 0;
+			unsigned long long idx = 0;
 			if (request::findValue(&req, "idx") != "")
 			{
 				std::stringstream s_str(request::findValue(&req, "idx"));
@@ -1153,7 +1037,7 @@ namespace http {
 			char szTmp[50];
 
 			std::vector<std::vector<std::string> > result;
-			result = m_sql.safe_query("SELECT ID, Active, [Date], Time, Type, Cmd, Level, Hue, Days, UseRandomness, MDay, Month, Occurence FROM Timers WHERE (DeviceRowID==%" PRIu64 ") AND (TimerPlan==%d) ORDER BY ID",
+			result = m_sql.safe_query("SELECT ID, Active, [Date], Time, Type, Cmd, Level, Hue, Days, UseRandomness, MDay, Month, Occurence FROM Timers WHERE (DeviceRowID==%llu) AND (TimerPlan==%d) ORDER BY ID",
 				idx, m_sql.m_ActiveTimerPlan);
 			if (result.size() > 0)
 			{
@@ -1512,7 +1396,7 @@ namespace http {
 
 		void CWebServer::RType_SetpointTimers(WebEmSession & session, const request& req, Json::Value &root)
 		{
-			uint64_t idx = 0;
+			unsigned long long idx = 0;
 			if (request::findValue(&req, "idx") != "")
 			{
 				std::stringstream s_str(request::findValue(&req, "idx"));
@@ -1525,7 +1409,7 @@ namespace http {
 			char szTmp[50];
 
 			std::vector<std::vector<std::string> > result;
-			result = m_sql.safe_query("SELECT ID, Active, [Date], Time, Type, Temperature, Days, MDay, Month, Occurence FROM SetpointTimers WHERE (DeviceRowID=%" PRIu64 ") AND (TimerPlan==%d) ORDER BY ID",
+			result = m_sql.safe_query("SELECT ID, Active, [Date], Time, Type, Temperature, Days, MDay, Month, Occurence FROM SetpointTimers WHERE (DeviceRowID=%llu) AND (TimerPlan==%d) ORDER BY ID",
 				idx, m_sql.m_ActiveTimerPlan);
 			if (result.size() > 0)
 			{
@@ -1835,7 +1719,7 @@ namespace http {
 
 		void CWebServer::RType_SceneTimers(WebEmSession & session, const request& req, Json::Value &root)
 		{
-			uint64_t idx = 0;
+			unsigned long long idx = 0;
 			if (request::findValue(&req, "idx") != "")
 			{
 				std::stringstream s_str(request::findValue(&req, "idx"));
@@ -1849,7 +1733,7 @@ namespace http {
 			char szTmp[40];
 
 			std::vector<std::vector<std::string> > result;
-			result = m_sql.safe_query("SELECT ID, Active, [Date], Time, Type, Cmd, Level, Hue, Days, UseRandomness, MDay, Month, Occurence FROM SceneTimers WHERE (SceneRowID==%" PRIu64 ") AND (TimerPlan==%d) ORDER BY ID",
+			result = m_sql.safe_query("SELECT ID, Active, [Date], Time, Type, Cmd, Level, Hue, Days, UseRandomness, MDay, Month, Occurence FROM SceneTimers WHERE (SceneRowID==%llu) AND (TimerPlan==%d) ORDER BY ID",
 				idx, m_sql.m_ActiveTimerPlan);
 			if (result.size() > 0)
 			{

@@ -43,8 +43,7 @@ namespace http {
 				const bool bDisplayHidden,
 				const bool bFetchFavorites,
 				const time_t LastUpdate,
-				const std::string &username,
-				const std::string &hardwareid = "");
+				const std::string &username);
 			// called from CSQLHelper
 			void ReloadCustomSwitchIcons();
 		private:

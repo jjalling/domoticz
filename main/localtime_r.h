@@ -10,7 +10,3 @@
 
 time_t mytime(time_t * _Time);
 
-// DST safe SQL datetime string parser
-bool ParseSQLdatetime(time_t &time, struct tm &result, const std::string szSQLdate);
-bool ParseSQLdatetime(time_t &time, struct tm &result, const std::string szSQLdate, int isdst);
-

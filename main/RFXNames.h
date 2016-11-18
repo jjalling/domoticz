@@ -31,12 +31,11 @@ enum _eSwitchType
 
 enum _eMeterType
 {
-	MTYPE_ENERGY=0,			//0
-	MTYPE_GAS,				//1
-	MTYPE_WATER,			//2
-    MTYPE_COUNTER,			//3
-	MTYPE_ENERGY_GENERATED,	//4
-	MTYPE_TIME,				//5
+	MTYPE_ENERGY=0,
+	MTYPE_GAS,
+	MTYPE_WATER,
+    MTYPE_COUNTER,
+	MTYPE_ENERGY_GENERATED,
 	MTYPE_END
 };
 
@@ -172,7 +171,6 @@ enum _eHardwareTypes {
 	HTYPE_ZIBLUEUSB,			//89
 	HTYPE_ZIBLUETCP,			//90
 	HTYPE_Yeelight,				//91
-	HTYPE_MySensorsMQTT,		//92
 	HTYPE_END
 };
 

@@ -4,6 +4,7 @@
 #include "../main/Logger.h"
 #include "hardwaretypes.h"
 #include "../main/localtime_r.h"
+#include "../json/json.h"
 #include "../main/RFXtrx.h"
 #include "../main/SQLHelper.h"
 #include "../httpclient/HTTPClient.h"
@@ -659,224 +660,200 @@ void CToonThermostat::GetMeterDetails()
 		return;
 	}
 	m_retry_counter = 0;
-
-	ParseThermostatData(root);
-	ParsePowerUsage(root);
-	ParseGasUsage(root);
-	ParseDeviceStatusData(root);
-}
-
-bool CToonThermostat::ParsePowerUsage(const Json::Value &root)
-{
-	if (root["powerUsage"].empty())
-		return false;
-
 	time_t atime = mytime(NULL);
 
-	unsigned long powerusage1 = (unsigned long)(root["powerUsage"]["meterReadingLow"].asFloat());
-	unsigned long powerusage2 = (unsigned long)(root["powerUsage"]["meterReading"].asFloat());
-
-	if ((powerusage1 == 0) && (powerusage2 == 0))
-	{
-		//New firmware does not provide meter readings anymore
-		if (root["powerUsage"]["dayUsage"].empty() == false)
-		{
-			unsigned long usage1 = (unsigned long)(root["powerUsage"]["dayUsage"].asFloat());
-			unsigned long usage2 = (unsigned long)(root["powerUsage"]["dayLowUsage"].asFloat());
-			if (usage1 < m_LastUsage1)
-			{
-				m_OffsetUsage1 += m_LastUsage1;
-			}
-			if (usage2 < m_LastUsage2)
-			{
-				m_OffsetUsage2 += m_LastUsage2;
-			}
-			m_p1power.powerusage1 = m_OffsetUsage1 + usage1;
-			m_p1power.powerusage2 = m_OffsetUsage2 + usage2;
-			m_LastUsage1 = usage1;
-			m_LastUsage2 = usage2;
-		}
-	}
-	else
-	{
-		m_p1power.powerusage1 = powerusage1;
-		m_p1power.powerusage2 = powerusage2;
-	}
-
-	if (root["powerUsage"]["meterReadingProdu"].empty() == false)
-	{
-		unsigned long powerdeliv1 = (unsigned long)(root["powerUsage"]["meterReadingLowProdu"].asFloat());
-		unsigned long powerdeliv2 = (unsigned long)(root["powerUsage"]["meterReadingProdu"].asFloat());
-
-		if ((powerdeliv1 != 0) || (powerdeliv2 != 0))
-		{
-			m_p1power.powerdeliv1 = powerdeliv1;
-			m_p1power.powerdeliv2 = powerdeliv2;
-		}
-		else
-		{
-			//Have not received an example from a user that has produced with the new firmware
-			//for now ignoring
-		}
-	}
-
-	m_p1power.usagecurrent = (unsigned long)(root["powerUsage"]["value"].asFloat());	//Watt
-	m_p1power.delivcurrent = (unsigned long)(root["powerUsage"]["valueProduced"].asFloat());	//Watt
-
-	if (root["powerUsage"]["valueSolar"].empty() == false)
-	{
-		float valueSolar = (float)(root["powerUsage"]["valueSolar"].asFloat());
-		if (valueSolar != 0)
-		{
-			SendWattMeter(1, 1, 255, valueSolar, "Solar");
-		}
-	}
-
-	//Send Electra if value changed, or at least every 5 minutes
-	if (
-		(m_p1power.usagecurrent != m_lastelectrausage) ||
-		(m_p1power.delivcurrent != m_lastelectradeliv) ||
-		(difftime(atime,m_lastSharedSendElectra) >= 300)
-		)
-	{
-		if ((m_p1power.powerusage1 != 0) || (m_p1power.powerusage2 != 0) || (m_p1power.powerdeliv1 != 0) || (m_p1power.powerdeliv2 != 0))
-		{
-			m_lastSharedSendElectra = atime;
-			m_lastelectrausage = m_p1power.usagecurrent;
-			m_lastelectradeliv = m_p1power.delivcurrent;
-			sDecodeRXMessage(this, (const unsigned char *)&m_p1power, NULL, 255);
-		}
-	}
-	return true;
-}
-
-bool CToonThermostat::ParseGasUsage(const Json::Value &root)
-{
-	if (root["gasUsage"].empty())
-		return false;
-	time_t atime = mytime(NULL);
-
-	m_p1gas.gasusage = (unsigned long)(root["gasUsage"]["meterReading"].asFloat());
-
-	//Send GAS if the value changed, or at least every 5 minutes
-	if (
-		(m_p1gas.gasusage != m_lastgasusage) ||
-		(difftime(atime,m_lastSharedSendGas) >= 300)
-		)
-	{
-		if (m_p1gas.gasusage != 0)
-		{
-			m_lastSharedSendGas = atime;
-			m_lastgasusage = m_p1gas.gasusage;
-			sDecodeRXMessage(this, (const unsigned char *)&m_p1gas, NULL, 255);
-		}
-	}
-	return true;
-}
-
-bool CToonThermostat::ParseDeviceStatusData(const Json::Value &root)
-{
 	//ZWave Devices
-	if (root["deviceStatusInfo"].empty())
-		return false;
-
-	if (root["deviceStatusInfo"]["device"].empty())
-		return false;
-
-	int totDevices = root["deviceStatusInfo"]["device"].size();
-	for (int ii = 0; ii < totDevices; ii++)
+	if (root["deviceStatusInfo"].empty() == false)
 	{
-		std::string deviceName = root["deviceStatusInfo"]["device"][ii]["name"].asString();
-		std::string uuid = root["deviceStatusInfo"]["device"][ii]["devUUID"].asString();
-		int state = root["deviceStatusInfo"]["device"][ii]["currentState"].asInt();
-
-		int Idx;
-		if (!GetUUIDIdx(uuid, Idx))
+		if (root["deviceStatusInfo"]["device"].empty() == false)
 		{
-			if (!AddUUID(uuid, Idx))
+			int totDevices = root["deviceStatusInfo"]["device"].size();
+			for (int ii = 0; ii < totDevices; ii++)
 			{
-				_log.Log(LOG_ERROR, "ToonThermostat: Error adding UUID to database?! Uuid=%s", uuid.c_str());
-				return false;
-			}
-		}
-		UpdateSwitch(Idx, state != 0, deviceName);
+				std::string deviceName = root["deviceStatusInfo"]["device"][ii]["name"].asString();
+				std::string uuid = root["deviceStatusInfo"]["device"][ii]["devUUID"].asString();
+				int state = root["deviceStatusInfo"]["device"][ii]["currentState"].asInt();
 
-		if (root["deviceStatusInfo"]["device"][ii]["currentUsage"].empty() == false)
-		{
-			double currentUsage = root["deviceStatusInfo"]["device"][ii]["currentUsage"].asDouble();
-			double DayCounter = root["deviceStatusInfo"]["device"][ii]["dayUsage"].asDouble();
+				int Idx;
+				if (!GetUUIDIdx(uuid, Idx))
+				{
+					if (!AddUUID(uuid, Idx))
+					{
+						_log.Log(LOG_ERROR, "ToonThermostat: Error adding UUID to database?! Uuid=%s", uuid.c_str());
+						return;
+					}
+				}
+				UpdateSwitch(Idx, state != 0, deviceName);
 
-			//double ElecOffset = GetElectricOffset(Idx, DayCounter);
-			double OldDayCounter = m_LastElectricCounter[Idx];
-			if (DayCounter < OldDayCounter)
-			{
-				//daily counter went to zero
-				m_OffsetElectricUsage[Idx] += OldDayCounter;
+				if (root["deviceStatusInfo"]["device"][ii]["currentUsage"].empty() == false)
+				{
+					double currentUsage = root["deviceStatusInfo"]["device"][ii]["currentUsage"].asDouble();
+					double DayCounter = root["deviceStatusInfo"]["device"][ii]["dayUsage"].asDouble();
+
+					//double ElecOffset = GetElectricOffset(Idx, DayCounter);
+					double OldDayCounter = m_LastElectricCounter[Idx];
+					if (DayCounter < OldDayCounter)
+					{
+						//daily counter went to zero
+						m_OffsetElectricUsage[Idx] += OldDayCounter;
+					}
+					m_LastElectricCounter[Idx] = DayCounter;
+					SendKwhMeterOldWay(Idx, 1, 255, currentUsage/1000.0, (m_OffsetElectricUsage[Idx] + m_LastElectricCounter[Idx])/1000.0, deviceName);
+				}
 			}
-			m_LastElectricCounter[Idx] = DayCounter;
-			SendKwhMeterOldWay(Idx, 1, 255, currentUsage / 1000.0, (m_OffsetElectricUsage[Idx] + m_LastElectricCounter[Idx]) / 1000.0, deviceName);
 		}
 	}
-	return true;
-}
 
-bool CToonThermostat::ParseThermostatData(const Json::Value &root)
-{
 	//thermostatInfo
-	if (root["thermostatInfo"].empty())
-		return false;
-
-	float currentTemp = root["thermostatInfo"]["currentTemp"].asFloat() / 100.0f;
-	float currentSetpoint = root["thermostatInfo"]["currentSetpoint"].asFloat() / 100.0f;
-	SendSetPointSensor(1, currentSetpoint, "Room Setpoint");
-	SendTempSensor(1, 255, currentTemp, "Room Temperature");
-
-	//int programState = root["thermostatInfo"]["programState"].asInt();
-	//int activeState = root["thermostatInfo"]["activeState"].asInt();
-
-	if (root["thermostatInfo"]["burnerInfo"].empty() == false)
+	if (root["thermostatInfo"].empty() == false)
 	{
-		//burnerinfo
-		//0=off
-		//1=heating
-		//2=hot water
-		//3=pre-heating
-		int burnerInfo = 0;
+		float currentTemp = root["thermostatInfo"]["currentTemp"].asFloat() / 100.0f;
+		float currentSetpoint = root["thermostatInfo"]["currentSetpoint"].asFloat() / 100.0f;
+		SendSetPointSensor(1, currentSetpoint, "Room Setpoint");
+		SendTempSensor(1, 255, currentTemp, "Room Temperature");
 
-		if (root["thermostatInfo"]["burnerInfo"].isString())
+		//int programState = root["thermostatInfo"]["programState"].asInt();
+		//int activeState = root["thermostatInfo"]["activeState"].asInt();
+
+		if (root["thermostatInfo"]["burnerInfo"].empty() == false)
 		{
-			burnerInfo = atoi(root["thermostatInfo"]["burnerInfo"].asString().c_str());
+			//burnerinfo
+			//0=off
+			//1=heating
+			//2=hot water
+			//3=pre-heating
+			int burnerInfo = 0;
+
+			if (root["thermostatInfo"]["burnerInfo"].isString())
+			{
+				burnerInfo = atoi(root["thermostatInfo"]["burnerInfo"].asString().c_str());
+			}
+			else if (root["thermostatInfo"]["burnerInfo"].isInt())
+			{
+				burnerInfo = root["thermostatInfo"]["burnerInfo"].asInt();
+			}
+			if (burnerInfo == 1)
+			{
+				UpdateSwitch(113, true, "HeatingOn");
+				UpdateSwitch(114, false, "TapwaterOn");
+				UpdateSwitch(115, false, "PreheatOn");
+			}
+			else if (burnerInfo == 2)
+			{
+				UpdateSwitch(113, false, "HeatingOn");
+				UpdateSwitch(114, true, "TapwaterOn");
+				UpdateSwitch(115, false, "PreheatOn");
+			}
+			else if (burnerInfo == 3)
+			{
+				UpdateSwitch(113, false, "HeatingOn");
+				UpdateSwitch(114, false, "TapwaterOn");
+				UpdateSwitch(115, true, "PreheatOn");
+			}
+			else
+			{
+				UpdateSwitch(113, false, "HeatingOn");
+				UpdateSwitch(114, false, "TapwaterOn");
+				UpdateSwitch(115, false, "PreheatOn");
+			}
 		}
-		else if (root["thermostatInfo"]["burnerInfo"].isInt())
+	}
+
+	if (root["gasUsage"].empty() == false)
+	{
+		m_p1gas.gasusage = (unsigned long)(root["gasUsage"]["meterReading"].asFloat());
+
+		//Send GAS if the value changed, or at least every 5 minutes
+		if (
+			(m_p1gas.gasusage != m_lastgasusage) ||
+			(atime - m_lastSharedSendGas >= 300)
+			)
 		{
-			burnerInfo = root["thermostatInfo"]["burnerInfo"].asInt();
+			if (m_p1gas.gasusage != 0)
+			{
+				m_lastSharedSendGas = atime;
+				m_lastgasusage = m_p1gas.gasusage;
+				sDecodeRXMessage(this, (const unsigned char *)&m_p1gas, NULL, 255);
+			}
 		}
-		if (burnerInfo == 1)
+	}
+	if (root["powerUsage"].empty() == false)
+	{
+		unsigned long powerusage1 = (unsigned long)(root["powerUsage"]["meterReadingLow"].asFloat());
+		unsigned long powerusage2 = (unsigned long)(root["powerUsage"]["meterReading"].asFloat());
+
+		if ((powerusage1 == 0) && (powerusage2 == 0))
 		{
-			UpdateSwitch(113, true, "HeatingOn");
-			UpdateSwitch(114, false, "TapwaterOn");
-			UpdateSwitch(115, false, "PreheatOn");
-		}
-		else if (burnerInfo == 2)
-		{
-			UpdateSwitch(113, false, "HeatingOn");
-			UpdateSwitch(114, true, "TapwaterOn");
-			UpdateSwitch(115, false, "PreheatOn");
-		}
-		else if (burnerInfo == 3)
-		{
-			UpdateSwitch(113, false, "HeatingOn");
-			UpdateSwitch(114, false, "TapwaterOn");
-			UpdateSwitch(115, true, "PreheatOn");
+			//New firmware does not provide meter readings anymore
+			if (root["powerUsage"]["dayUsage"].empty() == false)
+			{
+				unsigned long usage1 = (unsigned long)(root["powerUsage"]["dayUsage"].asFloat());
+				unsigned long usage2 = (unsigned long)(root["powerUsage"]["dayLowUsage"].asFloat());
+				if (usage1 < m_LastUsage1)
+				{
+					m_OffsetUsage1 += m_LastUsage1;
+				}
+				if (usage2 < m_LastUsage2)
+				{
+					m_OffsetUsage2 += m_LastUsage2;
+				}
+				m_p1power.powerusage1 = m_OffsetUsage1 + usage1;
+				m_p1power.powerusage2 = m_OffsetUsage2 + usage2;
+				m_LastUsage1 = usage1;
+				m_LastUsage2 = usage2;
+			}
 		}
 		else
 		{
-			UpdateSwitch(113, false, "HeatingOn");
-			UpdateSwitch(114, false, "TapwaterOn");
-			UpdateSwitch(115, false, "PreheatOn");
+			m_p1power.powerusage1 = powerusage1;
+			m_p1power.powerusage2 = powerusage2;
+		}
+
+		if (root["powerUsage"]["meterReadingProdu"].empty() == false)
+		{
+			unsigned long powerdeliv1 = (unsigned long)(root["powerUsage"]["meterReadingLowProdu"].asFloat());
+			unsigned long powerdeliv2 = (unsigned long)(root["powerUsage"]["meterReadingProdu"].asFloat());
+
+			if ((powerdeliv1 != 0) || (powerdeliv2 != 0))
+			{
+				m_p1power.powerdeliv1 = powerdeliv1;
+				m_p1power.powerdeliv2 = powerdeliv2;
+			}
+			else
+			{
+				//Have not received an example from a user that has produced with the new firmware
+				//for now ignoring
+			}
+		}
+
+		m_p1power.usagecurrent = (unsigned long)(root["powerUsage"]["value"].asFloat());	//Watt
+		m_p1power.delivcurrent = (unsigned long)(root["powerUsage"]["valueProduced"].asFloat());	//Watt
+
+		if (root["powerUsage"]["valueSolar"].empty() == false)
+		{
+			float valueSolar = (float)(root["powerUsage"]["valueSolar"].asFloat());
+			if (valueSolar != 0)
+			{
+				SendWattMeter(1, 1, 255, valueSolar, "Solar");
+			}
+		}
+		
+		//Send Electra if value changed, or at least every 5 minutes
+		if (
+			(m_p1power.usagecurrent != m_lastelectrausage) ||
+			(m_p1power.delivcurrent != m_lastelectradeliv) ||
+			(atime - m_lastSharedSendElectra >= 300)
+			)
+		{
+			if ((m_p1power.powerusage1 != 0) || (m_p1power.powerusage2 != 0) || (m_p1power.powerdeliv1 != 0) || (m_p1power.powerdeliv2 != 0))
+			{
+				m_lastSharedSendElectra = atime;
+				m_lastelectrausage = m_p1power.usagecurrent;
+				m_lastelectradeliv = m_p1power.delivcurrent;
+				sDecodeRXMessage(this, (const unsigned char *)&m_p1power, NULL, 255);
+			}
 		}
 	}
-	return true;
 }
 
 void CToonThermostat::SetSetpoint(const int idx, const float temp)

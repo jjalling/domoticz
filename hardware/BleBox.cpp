@@ -117,9 +117,11 @@ void BleBox::GetDevicesState()
 			{
 				case 0:
 				{
-					if (IsNodeExists(root, "state") == false)
+					if (root["state"].empty() == true)
+					{
+						_log.Log(LOG_ERROR, "BleBox: node 'state' missing!");
 						break;
-					
+					}
 					const bool state = root["state"].asBool();
 
 					SendSwitch(node, itt->second, 255, state, 0, DevicesType[itt->second].name);
@@ -127,9 +129,11 @@ void BleBox::GetDevicesState()
 				}
 				case 1:
 				{
-					if (IsNodeExists(root, "state") == false)
+					if (root["state"].empty() == true)
+					{
+						_log.Log(LOG_ERROR, "BleBox: node 'state' missing!");
 						break;
-
+					}
 					const int state = root["state"].asInt();
 
 					const int currentPos = root["currentPos"].asInt();
@@ -145,9 +149,16 @@ void BleBox::GetDevicesState()
 				}
 				case 2:
 				{
-					if (IsNodesExist(root, "light", "currentColor") == false)
+					if (root["light"].empty() == true)
+					{
+						_log.Log(LOG_ERROR, "BleBox: node 'light' missing!");
 						break;
-
+					}
+					if (root["light"]["currentColor"].empty() == true)
+					{
+						_log.Log(LOG_ERROR, "BleBox: node 'currentColor' missing!");
+						break;
+					}
 					const std::string currentColor = root["light"]["currentColor"].asString();
 					int hexNumber;
 					sscanf(currentColor.c_str(), "%x", &hexNumber);
@@ -158,9 +169,16 @@ void BleBox::GetDevicesState()
 				}
 				case 3:
 				{
-					if (IsNodesExist(root, "rgbw", "currentColor") == false)
+					if (root["rgbw"].empty() == true)
+					{
+						_log.Log(LOG_ERROR, "BleBox: node 'rgbw' missing!");
 						break;
-
+					}
+					if (root["rgbw"]["currentColor"].empty() == true)
+					{
+						_log.Log(LOG_ERROR, "BleBox: node 'currentColor' missing!");
+						break;
+					}
 					const std::string currentColor = root["rgbw"]["currentColor"].asString();
 					int hexNumber;
 					sscanf(currentColor.c_str(), "%x", &hexNumber);
@@ -170,9 +188,11 @@ void BleBox::GetDevicesState()
 				}
 				case 4:
 				{
-					if (IsNodeExists(root, "currentPos") == false)
+					if (root["currentPos"].empty() == true)
+					{
+						_log.Log(LOG_ERROR, "BleBox: node 'currentPos' missing!");
 						break;
-
+					}
 					const int currentPos = root["currentPos"].asInt();
 					int level = (int)(currentPos / (255.0 / 100.0));
 
@@ -181,10 +201,12 @@ void BleBox::GetDevicesState()
 				}
 				case 5:
 				{
-					if (IsNodesExist(root, "dimmer", "currentBrightness") == false)
+					if (root["currentBrightness"].empty() == true)
+					{
+						_log.Log(LOG_ERROR, "BleBox: node 'currentBrightness' missing!");
 						break;
-
-					const int currentPos = root["dimmer"]["currentBrightness"].asInt();
+					}
+					const int currentPos = root["currentBrightness"].asInt();
 					int level = (int)(currentPos / (255.0 / 100.0));
 
 					SendSwitch(node, itt->second, 255, level > 0, level, DevicesType[itt->second].name);
@@ -269,8 +291,11 @@ bool BleBox::WriteToHardware(const char *pdata, const unsigned char length)
 				if (root == "")
 					return false;
 
-				if (IsNodeExists(root, "state") == false)
+				if (root["state"].empty() == true)
+				{
+					_log.Log(LOG_ERROR, "BleBox: node 'state' missing!");
 					return false;
+				}
 
 				if (root["state"].asString() != state)
 				{
@@ -302,8 +327,11 @@ bool BleBox::WriteToHardware(const char *pdata, const unsigned char length)
 				if (root == "")
 					return false;
 
-				if (IsNodeExists(root, "state") == false)
+				if (root["state"].empty() == true)
+				{
+					_log.Log(LOG_ERROR, "BleBox: node 'state' missing!");
 					return false;
+				}
 
 				//if (root["state"].asString() != state)
 				//{
@@ -338,8 +366,16 @@ bool BleBox::WriteToHardware(const char *pdata, const unsigned char length)
 				if (root == "")
 					return false;
 
-				if (IsNodesExist(root, "light", "currentColor") == false)
+				if (root["light"].empty() == true)
+				{
+					_log.Log(LOG_ERROR, "BleBox: node 'light' missing!");
 					return false;
+				}
+				if (root["light"]["currentColor"].empty() == true)
+				{
+					_log.Log(LOG_ERROR, "BleBox: node 'currentColor' missing!");
+					return false;
+				}
 
 				if (root["light"]["currentColor"].asString() != level) // TODO or desiredcolor ??
 				{
@@ -368,8 +404,16 @@ bool BleBox::WriteToHardware(const char *pdata, const unsigned char length)
 		if (root == "")
 			return false;
 	
-		if (IsNodesExist(root, "rgbw", "desiredColor") == false)
+		if (root["rgbw"].empty() == true)
+		{
+			_log.Log(LOG_ERROR, "BleBox: node 'rgbw' missing!");
 			return false;
+		}
+		if (root["rgbw"]["desiredColor"].empty() == true)
+		{
+			_log.Log(LOG_ERROR, "BleBox: node 'desiredColor' missing!");
+			return false;
+		}
 
 		if (root["rgbw"]["desiredColor"].asString() != state)
 		{
@@ -378,29 +422,6 @@ bool BleBox::WriteToHardware(const char *pdata, const unsigned char length)
 		}
 	}
 	
-	return true;
-}
-
-bool BleBox::IsNodeExists(const Json::Value root, const std::string node)
-{
-	if (root[node].empty() == true)
-	{
-		_log.Log(LOG_ERROR, "BleBox: node '%s' missing!", node.c_str());
-		return false;
-	}
-	return true;
-}
-
-bool BleBox::IsNodesExist(const Json::Value root, const std::string node, const std::string value)
-{
-	if (IsNodeExists(root, node) == false)
-		return false;
-
-	if (root[node][value].empty() == true)
-	{
-		_log.Log(LOG_ERROR, "BleBox: value '%s' missing!", value.c_str());
-		return false;
-	}
 	return true;
 }
 
@@ -702,10 +723,15 @@ std::string BleBox::IdentifyDevice(const std::string &IPAddress)
 
 	if (root["device"].empty() == true)
 	{
-		if (IsNodeExists(root, "type") == false)
+		if (root["type"].empty() == true)
+		{
+			_log.Log(LOG_ERROR, "BleBox: Invalid data received!");
 			return "";
+		}
 		else
+		{
 			result = root["type"].asString();
+		}
 	}
 	else
 	{
