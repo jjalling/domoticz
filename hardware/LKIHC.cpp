@@ -73,14 +73,16 @@
 #include "../tinyxpath/xpath_static.h"
 #include <boost/shared_ptr.hpp>
 #include "IHC/IhcClient.hpp"
-#include <string.h>
+#include <cstring>
 #include <exception>
 #include <cstdlib>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
 #include <map>
 
-#define RESOURCE_NOTIFICATION_TIMEOUT_S 5
+const int notification_timeout_s 5;
+const int keep_alive = 30;
+
 std::vector<int> activeResourceIdList;
 CLKIHC::CLKIHC(const int ID, const std::string &IPAddress, const unsigned short Port, const std::string &Username, const std::string &Password) :
     m_IPAddress(IPAddress),
@@ -93,9 +95,7 @@ CLKIHC::CLKIHC(const int ID, const std::string &IPAddress, const unsigned short 
     Init();
 }
 
-CLKIHC::~CLKIHC(void)
-{
-}
+CLKIHC::~CLKIHC() = default;
 
 ihcClient* ihcC;
 
@@ -127,17 +127,17 @@ bool CLKIHC::StopHardware()
     return true;
 }
 
-using IhcDeviceID = unsigned long int;
-using IhcDeviceSerial = long unsigned int;
+using IhcDeviceID = uint64_t;
+using IhcDeviceSerial = uint64_t;
 using IhcDeviceSerialToID = std::multimap<IhcDeviceSerial, IhcDeviceID>;
 
 struct IhcObject {
-    IhcDeviceSerial SerialNumber;
-    uint8_t Type;
-    uint8_t SubType;
-    uint8_t RSSI;
-    uint8_t Battery;
-    IhcObject () : SerialNumber(0), Type(0), SubType(0), RSSI(0), Battery(0) {}
+    IhcDeviceSerial SerialNumber{0};
+    uint8_t Type{0};
+    uint8_t SubType{0};
+    uint8_t RSSI{0};
+    uint8_t Battery{0};
+    IhcObject () = default;
     IhcObject (IhcDeviceSerial serial, uint8_t ttype, uint8_t subtype, int rssi, int battery) :
         SerialNumber(serial), Type(ttype), SubType(subtype), RSSI(rssi), Battery(battery) {}
 };
@@ -153,13 +153,13 @@ void CLKIHC::Do_Work()
     auto crashCounter = 0;
     auto rssiAndBatteryUpdate = 0;
     auto firstTime = true;
-    auto sec_counter = 28;
+    auto sec_counter = (keep_alive - 2);
 
     while (!m_stoprequested)
     {
 
         sec_counter++;
-        m_LastHeartbeat = mytime(NULL);
+        m_LastHeartbeat = mytime(nullptr);
 
         if (ihcC->CONNECTED != ihcC->connectionState)
         {
@@ -168,8 +168,10 @@ void CLKIHC::Do_Work()
 #endif
             try
             {
-                if (0 == sec_counter % 30)
+                if (0 == sec_counter % keep_alive)
+                {
                     ihcC->openConnection();
+                }
             }
             catch (const char* msg)
             {
@@ -255,7 +257,9 @@ void CLKIHC::Do_Work()
                     }
 
                     if (rssiAndBatteryUpdate % 100 == 0)
+                    {
                         UpdateBatteryAndRSSI();
+                    }
                     rssiAndBatteryUpdate++;
 
 
@@ -275,7 +279,7 @@ void CLKIHC::Do_Work()
                     }
 
                     //std::vector<boost::shared_ptr<ResourceValue> > updatedResources;
-                    const auto updatedResources = ihcC->waitResourceValueNotifications(RESOURCE_NOTIFICATION_TIMEOUT_S);
+                    const auto updatedResources = ihcC->waitResourceValueNotifications(notification_timeout_s);
 
                     // Handle object state changes
                     //for (std::vector<boost::shared_ptr<ResourceValue> >::iterator it = updatedResources.begin(); it != updatedResources.end(); ++it)
@@ -352,9 +356,9 @@ void CLKIHC::Do_Work()
 
 bool CLKIHC::WriteToHardware(const char *pdata, const unsigned char length)
 {
+    auto result = false;
     if (ihcC->CONNECTED == ihcC->connectionState)
     {
-        auto result = false;
         const auto *pSen = reinterpret_cast<const tRBUF*>(pdata);
 
         try
@@ -423,13 +427,8 @@ bool CLKIHC::WriteToHardware(const char *pdata, const unsigned char length)
             ihcC->reset();
         }
 
-        return result;
     }
-    else
-    {
-        // Not connected to controller
-        return false;
-    }
+    return result;
 }
 
 void CLKIHC::addDeviceIfNotExists(const TiXmlNode* device, const unsigned char deviceType, bool isFunctionBlock)
@@ -464,7 +463,7 @@ void CLKIHC::addDeviceIfNotExists(const TiXmlNode* device, const unsigned char d
                     device->ToElement()->Attribute("name"));
 
             // If it's a wireless device, get the serial number so we can use it for the RSSI and battery level mappings
-            if (device->Parent()->ToElement()->Attribute("serialnumber") != 0)
+            if (device->Parent()->ToElement()->Attribute("serialnumber") != nullptr)
             {
                 const auto serialNumber_raw = std::string(device->Parent()->ToElement()->Attribute("serialnumber")).substr(3);
                 serialNumber = std::strtoul(serialNumber_raw.c_str(), NULL, 16);
@@ -492,15 +491,15 @@ void CLKIHC::addDeviceIfNotExists(const TiXmlNode* device, const unsigned char d
 
         m_sql.safe_query(
                 "INSERT INTO DeviceStatus (HardwareID, DeviceID, Type, SubType, SwitchType, SignalLevel, BatteryLevel, Name, nValue, AddjValue, AddjValue2, sValue, Options) "
-                "VALUES (%d,'%q',%d,%d,%d,12,255,'%q',0, '', '', '', '%lld')",
-                m_HwdID, sid, pTypeGeneralSwitch, deviceType, STYPE_OnOff, buff,1.0,1.0, serialNumber);
+                "VALUES (%d, '%q', %d, %d, %d, 12, 255, '%q', 0, '', '', '', '%lld')",
+                m_HwdID, sid, pTypeGeneralSwitch, deviceType, STYPE_OnOff, buff, 1.0, 1.0, serialNumber);
     }
     else
     {
         // TODO: Remove when merging to master
         // Device already exists - add serialnumber
         // If it's a wireless device, get the serial number so we can use it for the RSSI and battery level mappings
-        if (device->Parent()->ToElement()->Attribute("serialnumber") != 0)
+        if (device->Parent()->ToElement()->Attribute("serialnumber") != nullptr)
         {
             std::string const serialNumber_raw = std::string(device->Parent()->ToElement()->Attribute("serialnumber")).substr(3);
             serialNumber = std::strtoul(serialNumber_raw.c_str(), NULL, 16);
@@ -544,7 +543,9 @@ void CLKIHC::iterateDevices(const TiXmlNode* deviceNode)
     }
 
     if (deviceType != -1)
+    {
         addDeviceIfNotExists(deviceNode, deviceType, isFunctionBlock);
+    }
 
     for (const TiXmlNode* node = deviceNode->FirstChild(); node; node = node->NextSibling())
     {
@@ -569,6 +570,7 @@ void CLKIHC::GetDevicesFromController()
         iterateDevices(thisNode);
     }
 }
+
 std::string CLKIHC::getValue( TiXmlElement* const a, std::string const t)
 {
     TinyXPath::xpath_processor proc(a, t.c_str());
@@ -580,6 +582,7 @@ std::string CLKIHC::getValue( TiXmlElement* const a, std::string const t)
     }
     return "";
 }
+
 bool CLKIHC::UpdateBatteryAndRSSI()
 {
 #ifdef _DEBUG
@@ -588,9 +591,9 @@ bool CLKIHC::UpdateBatteryAndRSSI()
     TiXmlDocument const RFandRSSIinfo =  ihcC->getRF();
     TinyXPath::xpath_processor processor ( RFandRSSIinfo.RootElement(), "/SOAP-ENV:Envelope/SOAP-ENV:Body/ns1:getDetectedDeviceList1/ns1:arrayItem");
     processor.u_compute_xpath_node_set(); // <-- this is important. It executes the Xpath expression
-    if (processor.XNp_get_xpath_node(0)->FirstChild() != 0)
+    if (processor.XNp_get_xpath_node(0)->FirstChild() != nullptr)
     {
-        for (int i = 0; i < processor.u_compute_xpath_node_set(); i++)
+        for (unsigned int i = 0; i < processor.u_compute_xpath_node_set(); i++)
         {
             TiXmlNode* const thisNode = processor.XNp_get_xpath_node(i);
             TiXmlElement * const res = thisNode->FirstChild()->ToElement();
@@ -632,10 +635,14 @@ namespace http {
 
             int iHardwareID = atoi(idx.c_str());
             CDomoticzHardwareBase *pBaseHardware = m_mainworker.GetHardware(iHardwareID);
-            if (pBaseHardware == NULL)
+            if (pBaseHardware == nullptr)
+            {
                 return;
+            }
             if (pBaseHardware->HwdType != HTYPE_IHC)
+            {
                 return;
+            }
             CLKIHC *pHardware = reinterpret_cast<CLKIHC*>(pBaseHardware);
 
             try
