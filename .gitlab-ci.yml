@@ -19,8 +19,8 @@ build:release_nocmake:
   stage: build
   script:
     - pwd
-    - ls -l CMakeFiles
-    - ls -l zip/CMakeFiles/minizip.dir/unzip.c.o
+    - ls -l
+    - cd build
     - make
 
 build:release:
