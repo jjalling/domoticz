@@ -10,6 +10,17 @@ source:
   script:
     - ls
 
+build:release_nocmake:
+  when: manual
+  stage: build
+  cache:
+    untracked: true
+  script:
+    - pwd
+    - ls -l CMakeFiles
+    - ls -l zip/CMakeFiles/minizip.dir/unzip.c.o
+    - make
+
 build:release:
   when: manual
   stage: build
