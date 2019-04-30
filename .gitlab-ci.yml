@@ -13,6 +13,9 @@ source:
 build:release:
   when: manual
   stage: build
+  cache:
+    paths:
+      - "*.o"
   script:
     - pwd
     - cmake -DCMAKE_BUILD_TYPE=Release .
