@@ -1,0 +1,19 @@
+image: registry.gitlab.com/jjalling/rpibuilder:latest
+
+stages:
+  - source
+  - build
+
+source:
+  when: manual
+  stage: source
+  script:
+    - cd domoticz
+    - ls
+
+build:release:
+  when: manual
+  stage: build
+  script:
+    - pwd
+    - ls
