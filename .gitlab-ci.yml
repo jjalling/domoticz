@@ -18,5 +18,6 @@ build:release:
   script:
     - pwd
     - ls -l CMakeFiles
+    - ls -l zip/CMakeFiles/minizip.dir/unzip.c.o
     - cmake -DCMAKE_BUILD_TYPE=Release .
     - make
