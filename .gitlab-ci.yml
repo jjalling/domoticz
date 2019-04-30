@@ -4,6 +4,10 @@ stages:
   - source
   - build
 
+cache:
+  paths:
+    - build/
+
 source:
   when: manual
   stage: source
@@ -13,8 +17,6 @@ source:
 build:release_nocmake:
   when: manual
   stage: build
-  cache:
-    untracked: true
   script:
     - pwd
     - ls -l CMakeFiles
@@ -24,11 +26,9 @@ build:release_nocmake:
 build:release:
   when: manual
   stage: build
-  cache:
-    untracked: true
   script:
     - pwd
-    - ls -l CMakeFiles
-    - ls -l zip/CMakeFiles/minizip.dir/unzip.c.o
-    - cmake -DCMAKE_BUILD_TYPE=Release .
-    - make
+    - mkdir build
+    - cd build
+    - cmake -DCMAKE_BUILD_TYPE=Release ..
+    - make -j 4
