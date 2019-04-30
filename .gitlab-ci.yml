@@ -8,7 +8,6 @@ source:
   when: manual
   stage: source
   script:
-    - cd domoticz
     - ls
 
 build:release:
@@ -16,4 +15,5 @@ build:release:
   stage: build
   script:
     - pwd
-    - ls
+    - cmake -DCMAKE_BUILD_TYPE=Release .
+    - make
