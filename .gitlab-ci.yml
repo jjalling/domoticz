@@ -22,6 +22,7 @@ build:release_nocmake:
     - ls -l
     - cd build
     - ls -l
+    - make domoticz/fast
 
 build:release:
   when: manual
