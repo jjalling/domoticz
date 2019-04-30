@@ -17,5 +17,6 @@ build:release:
     untracked: true
   script:
     - pwd
+    - ls -l CMakeFiles
     - cmake -DCMAKE_BUILD_TYPE=Release .
     - make
