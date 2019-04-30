@@ -21,7 +21,7 @@ build:release_nocmake:
     - pwd
     - ls -l
     - cd build
-    - make
+    - ls -l
 
 build:release:
   when: manual
