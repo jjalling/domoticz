@@ -29,7 +29,6 @@ CDavisLoggerSerial::CDavisLoggerSerial(const int ID, const std::string& devname,
 {
 	m_HwdID = ID;
 	m_iBaudRate = baud_rate;
-	m_stoprequested = false;
 	m_retrycntr = RETRY_DELAY;
 	m_statecounter = 0;
 	m_state = DSTATE_WAKEUP;
@@ -43,27 +42,25 @@ CDavisLoggerSerial::~CDavisLoggerSerial(void)
 bool CDavisLoggerSerial::StartHardware()
 {
 	StopHardware();
+
+	RequestStart();
+
 	m_retrycntr = RETRY_DELAY; //will force reconnect first thing
-	m_stoprequested = false;
 	//Start worker thread
 	m_thread = std::make_shared<std::thread>(&CDavisLoggerSerial::Do_Work, this);
-	SetThreadName(m_thread->native_handle(), "DavisLoggerSerial");
-
+	SetThreadNameInt(m_thread->native_handle());
 	return (m_thread != nullptr);
 
 }
 
 bool CDavisLoggerSerial::StopHardware()
 {
-	m_stoprequested = true;
 	if (m_thread)
 	{
+		RequestStop();
 		m_thread->join();
 		m_thread.reset();
 	}
-	// Wait a while. The read thread might be reading. Adding this prevents a pointer error in the async serial class.
-	sleep_milliseconds(10);
-	terminate();
 	m_bIsStarted = false;
 	return true;
 }
@@ -74,15 +71,15 @@ bool CDavisLoggerSerial::OpenSerialDevice()
 	try
 	{
 		open(m_szSerialPort, m_iBaudRate);
-		_log.Log(LOG_STATUS, "Davis: Using serial port: %s", m_szSerialPort.c_str());
+		Log(LOG_STATUS, "Using serial port: %s", m_szSerialPort.c_str());
 		m_statecounter = 0;
 		m_state = DSTATE_WAKEUP;
 	}
 	catch (boost::exception & e)
 	{
-		_log.Log(LOG_ERROR, "Davis: Error opening serial port!");
+		Log(LOG_ERROR, "Error opening serial port!");
 #ifdef _DEBUG
-		_log.Log(LOG_ERROR, "-----------------\n%s\n----------------", boost::diagnostic_information(e).c_str());
+		Log(LOG_ERROR, "-----------------\n%s\n----------------", boost::diagnostic_information(e).c_str());
 #else
 		(void)e;
 #endif
@@ -90,7 +87,7 @@ bool CDavisLoggerSerial::OpenSerialDevice()
 	}
 	catch (...)
 	{
-		_log.Log(LOG_ERROR, "Davis: Error opening serial port!!!");
+		Log(LOG_ERROR, "Error opening serial port!!!");
 		return false;
 	}
 	m_bIsStarted = true;
@@ -106,30 +103,20 @@ bool CDavisLoggerSerial::WriteToHardware(const char* /*pdata*/, const unsigned c
 
 void CDavisLoggerSerial::Do_Work()
 {
+	Log(LOG_STATUS, "Worker started...");
+
 	int sec_counter = 0;
-	while (!m_stoprequested)
+	while (!IsStopRequested(1000))
 	{
-		sleep_seconds(1);
-
 		sec_counter++;
-
 		if (sec_counter % 12 == 0) {
 			mytime(&m_LastHeartbeat);
 		}
-		if (m_stoprequested)
-			break;
-
-#ifdef DEBUG_DAVIS
-		sOnConnected(this);
-		HandleLoopData(NULL, 0);
-		continue;
-#endif
-
 		if (!isOpen())
 		{
 			if (m_retrycntr == 0)
 			{
-				_log.Log(LOG_STATUS, "Davis: serial setup retry in %d seconds...", RETRY_DELAY);
+				Log(LOG_STATUS, "serial setup retry in %d seconds...", RETRY_DELAY);
 			}
 			m_retrycntr++;
 			if (m_retrycntr >= RETRY_DELAY)
@@ -164,21 +151,22 @@ void CDavisLoggerSerial::Do_Work()
 			}
 		}
 	}
-	_log.Log(LOG_STATUS, "Davis: Serial Worker stopped...");
+	terminate();
+
+	Log(LOG_STATUS, "Worker stopped...");
 }
 
 void CDavisLoggerSerial::readCallback(const char *data, size_t len)
 {
-	std::lock_guard<std::mutex> l(readQueueMutex);
 	try
 	{
-		//_log.Log(LOG_NORM,"Davis: received %ld bytes",len);
+		//Log(LOG_NORM,"received %ld bytes",len);
 
 		switch (m_state)
 		{
 		case DSTATE_WAKEUP:
 			if (len == 2) {
-				_log.Log(LOG_NORM, "Davis: System is Awake...");
+				Log(LOG_NORM, "System is Awake...");
 				m_state = DSTATE_LOOP;
 				m_statecounter = DAVIS_READ_INTERVAL - 1;
 			}
@@ -187,7 +175,7 @@ void CDavisLoggerSerial::readCallback(const char *data, size_t len)
 			if (len == 2)
 				break; //could be a left over from the awake
 			if (len != 100) {
-				_log.Log(LOG_ERROR, "Davis: Invalid bytes received!...");
+				Log(LOG_ERROR, "Invalid bytes received!...");
 				//lets try again
 				terminate();
 			}

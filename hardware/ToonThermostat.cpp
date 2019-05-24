@@ -10,10 +10,6 @@
 #include "../main/SQLHelper.h"
 #include "../json/json.h"
 
-#include <boost/uuid/uuid.hpp>            // uuid class
-#include <boost/uuid/uuid_generators.hpp> // generators
-#include <boost/uuid/uuid_io.hpp>         // streaming operators etc.
-
 #ifdef _DEBUG
 //	#define DEBUG_ToonThermostat
 //	#define DEBUG_ToonThermostatW
@@ -110,7 +106,6 @@ m_Agreement(Agreement)
 
 	m_ClientID = "";
 	m_ClientIDChecksum = "";
-	m_stoprequested = false;
 	m_lastSharedSendElectra = 0;
 	m_lastSharedSendGas = 0;
 	m_lastgasusage = 0;
@@ -139,7 +134,6 @@ void CToonThermostat::Init()
 {
 	m_ClientID = "";
 	m_ClientIDChecksum = "";
-	m_stoprequested = false;
 	m_lastSharedSendElectra = 0;
 	m_lastSharedSendGas = 0;
 	m_lastgasusage = 0;
@@ -178,10 +172,12 @@ void CToonThermostat::Init()
 
 bool CToonThermostat::StartHardware()
 {
+	RequestStart();
+
 	Init();
 	//Start worker thread
 	m_thread = std::make_shared<std::thread>(&CToonThermostat::Do_Work, this);
-	SetThreadName(m_thread->native_handle(), "ToonThermostat");
+	SetThreadNameInt(m_thread->native_handle());
 	m_bIsStarted=true;
 	sOnConnected(this);
 	return (m_thread != nullptr);
@@ -191,13 +187,11 @@ bool CToonThermostat::StopHardware()
 {
 	if (m_thread)
 	{
-		m_stoprequested = true;
+		RequestStop();
 		m_thread->join();
 		m_thread.reset();
 	}
     m_bIsStarted=false;
-	if (!m_bDoLogin)
-		Logout();
     return true;
 }
 
@@ -205,9 +199,8 @@ void CToonThermostat::Do_Work()
 {
 	_log.Log(LOG_STATUS,"ToonThermostat: Worker started...");
 	int sec_counter = 1;
-	while (!m_stoprequested)
+	while (!IsStopRequested(1000))
 	{
-		sleep_seconds(1);
 		m_poll_counter--;
 		sec_counter++;
 		if (sec_counter % 12 == 0) {
@@ -225,6 +218,8 @@ void CToonThermostat::Do_Work()
 			}
 		}
 	}
+	Logout();
+
 	_log.Log(LOG_STATUS,"ToonThermostat: Worker stopped...");
 }
 
@@ -289,12 +284,9 @@ void CToonThermostat::UpdateSwitch(const unsigned char Idx, const bool bOn, cons
 	sDecodeRXMessage(this, (const unsigned char *)&lcmd.LIGHTING2, defaultname.c_str(), 255);
 }
 
-
 std::string CToonThermostat::GetRandom()
 {
-	boost::uuids::uuid uuid = boost::uuids::random_generator()();
-	std::string suuid = boost::uuids::to_string(uuid);
-	return suuid;
+	return GenerateUUID();
 }
 
 bool CToonThermostat::Login()
@@ -305,7 +297,7 @@ bool CToonThermostat::Login()
 	}
 	m_ClientID = "";
 	std::stringstream sstr;
-	sstr << "username=" << m_UserName << "&password=" << m_Password;
+	sstr << "username=" << m_UserName << "&password=" << CURLEncode::URLEncode(m_Password);
 	std::string szPostdata=sstr.str();
 	std::vector<std::string> ExtraHeaders;
 	std::string sResult;

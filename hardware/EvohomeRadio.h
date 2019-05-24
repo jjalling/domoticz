@@ -86,6 +86,7 @@ private:
 	bool DecodeExternalSensor(CEvohomeMsg &msg);
 	bool DecodeDeviceInfo(CEvohomeMsg &msg);
 	bool DecodeBatteryInfo(CEvohomeMsg &msg);
+	bool DecodeSync(CEvohomeMsg &msg);
 	bool DumpMessage(CEvohomeMsg &msg);
 
 	void AddSendQueue(const CEvohomeMsg &msg);
@@ -98,7 +99,6 @@ private:
 	void SendRelayHeatDemand(uint8_t nDevNo, uint8_t nDemand);
 	void UpdateRelayHeatDemand(uint8_t nDevNo, uint8_t nDemand);
 protected:
-	volatile bool m_stoprequested;
 	std::shared_ptr<std::thread> m_thread;
 	int m_retrycntr;
 	int m_nBufPtr;

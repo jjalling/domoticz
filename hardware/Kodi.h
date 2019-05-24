@@ -7,7 +7,7 @@
 #include <boost/asio.hpp>
 #include <boost/array.hpp>
 
-class CKodiNode : public std::enable_shared_from_this<CKodiNode>
+class CKodiNode : public std::enable_shared_from_this<CKodiNode>, StoppableTask
 {
 	class CKodiStatus
 	{
@@ -71,7 +71,7 @@ public:
 	void			SetPlaylist(const std::string& playlist);
 	void			SetExecuteCommand(const std::string& command);
 	bool			SendShutdown();
-	void			StopRequest() { m_stoprequested = true; };
+	void			StopRequest() { RequestStop(); };
 	bool			IsBusy() { return m_Busy; };
 	bool			IsOn() { return (m_CurrentStatus.Status() != MSTAT_OFF); };
 
@@ -80,7 +80,6 @@ public:
 	std::string		m_Name;
 
 protected:
-	bool			m_stoprequested;
 	bool			m_Busy;
 	bool			m_Stoppable;
 
@@ -130,7 +129,6 @@ public:
 	void RemoveNode(const int ID);
 	void RemoveAllNodes();
 	void SetSettings(const int PollIntervalsec, const int PingTimeoutms);
-	void Restart();
 	void SendCommand(const int ID, const std::string &command);
 	bool SetPlaylist(const int ID, const std::string &playlist);
 	bool SetExecuteCommand(const int ID, const std::string &command);
@@ -147,7 +145,6 @@ private:
 	int m_iPollInterval;
 	int m_iPingTimeoutms;
 	std::shared_ptr<std::thread> m_thread;
-	volatile bool m_stoprequested;
 	std::mutex m_mutex;
 	boost::asio::io_service m_ios;
 };

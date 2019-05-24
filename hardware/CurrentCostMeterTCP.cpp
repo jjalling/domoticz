@@ -11,7 +11,6 @@ CurrentCostMeterTCP::CurrentCostMeterTCP(const int ID, const std::string &IPAddr
 	m_retrycntr(RETRY_DELAY),
 	m_szIPAddress(IPAddress),
 	m_usIPPort(usIPPort),
-	m_stoprequested(false),
 	m_socket(INVALID_SOCKET)
 {
 	m_HwdID=ID;
@@ -23,7 +22,7 @@ CurrentCostMeterTCP::~CurrentCostMeterTCP(void)
 
 bool CurrentCostMeterTCP::StartHardware()
 {
-	m_stoprequested=false;
+	RequestStart();
 
 	memset(&m_addr,0,sizeof(sockaddr_in));
 	m_addr.sin_family = AF_INET;
@@ -57,7 +56,7 @@ bool CurrentCostMeterTCP::StartHardware()
 
 	//Start worker thread
 	m_thread = std::make_shared<std::thread>(&CurrentCostMeterTCP::Do_Work, this);
-	SetThreadName(m_thread->native_handle(), "CurrentCostMeterTCP");
+	SetThreadNameInt(m_thread->native_handle());
 	return (m_thread != nullptr);
 }
 
@@ -68,14 +67,12 @@ bool CurrentCostMeterTCP::isConnected()
 
 bool CurrentCostMeterTCP::StopHardware()
 {
-	if (isConnected())
+	if (m_thread)
 	{
-		try {
-			disconnect();
-		} catch(...)
-		{
-			//Don't throw from a Stop command
-		}
+		RequestStop();
+		disconnect(); //force socket close to unblock the read request in the thread
+		m_thread->join();
+		m_thread.reset();
 	}
 	m_bIsStarted=false;
 	return true;
@@ -86,7 +83,7 @@ bool CurrentCostMeterTCP::ConnectInternal()
 	m_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (m_socket == INVALID_SOCKET)
 	{
-		_log.Log(LOG_ERROR,"CurrentCost Smart Meter: could not create a TCP/IP socket!");
+		Log(LOG_ERROR,"could not create a TCP/IP socket!");
 		return false;
 	}
 
@@ -97,11 +94,11 @@ bool CurrentCostMeterTCP::ConnectInternal()
 	{
 		closesocket(m_socket);
 		m_socket=INVALID_SOCKET;
-		_log.Log(LOG_ERROR,"CurrentCost Smart Meter: could not connect to: %s:%d",m_szIPAddress.c_str(),m_usIPPort);
+		Log(LOG_ERROR,"could not connect to: %s:%d",m_szIPAddress.c_str(),m_usIPPort);
 		return false;
 	}
 
-	_log.Log(LOG_STATUS,"CurrentCost Smart Meter: connected to: %s:%d", m_szIPAddress.c_str(), m_usIPPort);
+	Log(LOG_STATUS,"connected to: %s:%d", m_szIPAddress.c_str(), m_usIPPort);
 
 	Init();
 
@@ -111,10 +108,9 @@ bool CurrentCostMeterTCP::ConnectInternal()
 
 void CurrentCostMeterTCP::disconnect()
 {
-	m_stoprequested=true;
 	if (m_socket==INVALID_SOCKET)
 		return;
-	closesocket(m_socket);	//will terminate the thread
+	closesocket(m_socket);
 	m_socket=INVALID_SOCKET;
 }
 
@@ -122,28 +118,27 @@ void CurrentCostMeterTCP::disconnect()
 void CurrentCostMeterTCP::Do_Work()
 {
 	int sec_counter = 0;
-	while (!m_stoprequested)
+	while (!IsStopRequested(100))
 	{
-		if (
-			(m_socket == INVALID_SOCKET)&&
-			(!m_stoprequested)
-			)
+		if (m_socket == INVALID_SOCKET)
 		{
-			sleep_seconds(1);
-			sec_counter++;
-
-			if (sec_counter % 12 == 0) {
-				m_LastHeartbeat=mytime(NULL);
-			}
-
-			m_retrycntr++;
-			if (m_retrycntr>=RETRY_DELAY)
+			if (!IsStopRequested(900)) //+100 = 1000
 			{
-				m_retrycntr=0;
-				if (!ConnectInternal())
+				sec_counter++;
+
+				if (sec_counter % 12 == 0) {
+					m_LastHeartbeat = mytime(NULL);
+				}
+
+				m_retrycntr++;
+				if (m_retrycntr >= RETRY_DELAY)
 				{
-					_log.Log(LOG_STATUS,"CurrentCost Smart Meter: retrying in %d seconds...", RETRY_DELAY);
-					continue;
+					m_retrycntr = 0;
+					if (!ConnectInternal())
+					{
+						Log(LOG_STATUS, "retrying in %d seconds...", RETRY_DELAY);
+						continue;
+					}
 				}
 			}
 		}
@@ -151,28 +146,20 @@ void CurrentCostMeterTCP::Do_Work()
 		{
 			char data[1028];
 			int bread=recv(m_socket,data,sizeof(data),0);
-			if (m_stoprequested)
+			if (IsStopRequested(100))
 				break;
 			m_LastHeartbeat=mytime(NULL);
-			if ((bread==0)||(bread<0)) {
-				_log.Log(LOG_ERROR,"CurrentCost Smart Meter: TCP/IP connection closed!");
-				closesocket(m_socket);
-				m_socket=INVALID_SOCKET;
-				if (!m_stoprequested)
-				{
-					_log.Log(LOG_STATUS,"CurrentCost Smart Meter: retrying in %d seconds...", RETRY_DELAY);
-					m_retrycntr=0;
-					continue;
-				}
-			}
-			else
+			if ((bread==0)||(bread<0))
 			{
-				std::lock_guard<std::mutex> l(readQueueMutex);
-				ParseData(data, bread);
+				disconnect();
+				Log(LOG_ERROR, "TCP/IP connection closed!, retrying in %d seconds...", RETRY_DELAY);
+				m_retrycntr = 0;
+				continue;
 			}
+			ParseData(data, bread);
 		}
 	}
-	_log.Log(LOG_STATUS,"CurrentCost Smart Meter: TCP/IP Worker stopped...");
+	Log(LOG_STATUS,"TCP/IP Worker stopped...");
 }
 
 void CurrentCostMeterTCP::write(const char* /*data*/, size_t /*size*/)

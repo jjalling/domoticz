@@ -445,7 +445,7 @@ private:
 
 	void UpdateSwitch(const _eSetType vType, const unsigned char Idx, const int SubUnit, const bool bOn, const double Level, const std::string &defaultname, const int BatLevel);
 
-	void UpdateSwitchLastUpdate(const unsigned char Idx, const int SubUnit);
+	void UpdateSwitchLastUpdate(const unsigned char NodeID, const int ChildID);
 	void UpdateBlindSensorLastUpdate(const int NodeID, const int ChildID);
 	void UpdateRGBWSwitchLastUpdate(const int NodeID, const int ChildID);
 
@@ -474,12 +474,12 @@ private:
 
 	bool StartSendQueue();
 	void StopSendQueue();
-	void Do_Send_Work();
+	void Do_Work();
 private:
 	std::string m_szSerialPort;
 	std::map<int, _tMySensorNode> m_nodes;
 	concurrent_queue<std::string > m_sendQueue;
-	std::shared_ptr<std::thread> m_send_thread;
+	std::shared_ptr<std::thread> m_thread;
 	std::string m_GatewayVersion;
 	bool m_bAckReceived;
 	int m_AckNodeID;

@@ -21,7 +21,6 @@ public:
 	void RemoveNode(const int ID);
 	void RemoveAllNodes();
 	void SetSettings(const int PollIntervalsec, const int PingTimeoutms);
-	void Restart();
 	void SendCommand(const int ID, const std::string &command);
 	bool SetExecuteCommand(const int ID, const std::string &command);
 private:
@@ -37,7 +36,6 @@ private:
 	int m_iPollInterval;
 	int m_iPingTimeoutms;
 	std::shared_ptr<std::thread> m_thread;
-	volatile bool m_stoprequested;
 	std::mutex m_mutex;
 	boost::asio::io_service m_ios;
 };

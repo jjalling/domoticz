@@ -64,7 +64,7 @@ private:
 	std::string ISO2UTF8(const std::string &name);
 
 	std::pair<unsigned char*, unsigned int> getFullFrame(const unsigned char* pCmd, const unsigned int cmdLength);
-	int SendCommand(const unsigned char* cmd, const unsigned int cmdLength, unsigned char *answer, const unsigned int expectedLength1, const unsigned int expectedLength2 = -1);
+	int SendCommand(const unsigned char* cmd, const unsigned int cmdLength, unsigned char *answer, const int expectedLength);
 private:
 	int m_modelIndex;
 	bool m_data32;
@@ -73,7 +73,6 @@ private:
 	const unsigned short m_IPPort;
 	const std::string m_IPAddress;
 	int m_pollInterval;
-	volatile bool m_stoprequested;
 	std::shared_ptr<std::thread> m_thread;
 	std::map<unsigned int, const char*> errorCodes;
 	// filled by 0x7F command

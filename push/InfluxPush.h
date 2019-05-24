@@ -11,7 +11,7 @@ class CInfluxPush : public CBasePush
 	};
 public:
 	CInfluxPush();
-	void Start();
+	bool Start();
 	void Stop();
 	void UpdateSettings();
 private:
@@ -20,9 +20,6 @@ private:
 
 	std::shared_ptr<std::thread> m_thread;
 	std::mutex m_background_task_mutex;
-	bool m_stoprequested;
-	bool StartThread();
-	void StopThread();
 	void Do_Work();
 
 	std::map<std::string,_tPushItem> m_PushedItems;
@@ -30,6 +27,7 @@ private:
 	std::string m_szURL;
 	std::string m_InfluxIP;
 	int m_InfluxPort;
+	std::string m_InfluxPath;
 	std::string m_InfluxDatabase;
 	std::string m_InfluxUsername;
 	std::string m_InfluxPassword;

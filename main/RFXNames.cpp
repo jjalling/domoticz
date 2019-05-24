@@ -156,133 +156,140 @@ const char *Timer_Cmd_Desc(const int tType)
 	return findTableIDSingle1(Table, tType);
 }
 
+//ID, Long description, short description
+static const STR_TABLE_SINGLE	HardwareTypeTable[] =
+{
+	{ HTYPE_RFXtrx315, "RFXCOM - RFXtrx315 USB 315MHz Transceiver",					"RFXCOM" },
+	{ HTYPE_RFXtrx433, "RFXCOM - RFXtrx433 USB 433.92MHz Transceiver",				"RFXCOM" },
+	{ HTYPE_RFXLAN, "RFXCOM - RFXtrx shared over LAN interface",					"RFXCOM" },
+	{ HTYPE_Domoticz, "Domoticz - Remote Server",									"Domoticz Remote" },
+	{ HTYPE_P1SmartMeter, "P1 Smart Meter USB",										"P1 Meter" },
+	{ HTYPE_P1SmartMeterLAN, "P1 Smart Meter with LAN interface",					"P1 Meter" },
+	{ HTYPE_YouLess, "YouLess Meter with LAN interface",							"YouLess" },
+	{ HTYPE_WINDDELEN, "Winddelen",													"Winddelen" },
+	{ HTYPE_TE923, "TE923 USB Compatible Weather Station",							"TE923" },
+	{ HTYPE_Rego6XX, "Rego 6XX USB/serial interface",								"Rego_6XX" },
+	{ HTYPE_TTN_MQTT, "The Things Network (MQTT/CayenneLPP) with LAN interface",	"TTN_MQTT" },
+	{ HTYPE_DavisVantage, "Davis Vantage Weather Station USB",						"Davis" },
+	{ HTYPE_VOLCRAFTCO20, "Volcraft CO-20 USB air quality sensor",					"Voltcraft" },
+	{ HTYPE_1WIRE, "1-Wire (System)",												"1-Wire" },
+	{ HTYPE_RaspberryBMP085, "I2C sensor BMP085/180 Temp+Baro",						"I2C BM" },
+	{ HTYPE_Wunderground, "Weather Underground",									"WU" },
+	{ HTYPE_DarkSky, "DarkSky (Weather Lookup)",									"Darksky" },
+	{ HTYPE_Dummy, "Dummy (Does nothing, use for virtual switches only)",			"Dummy" },
+	{ HTYPE_Tellstick, "Tellstick",													"Tellstick" },
+	{ HTYPE_PiFace, "PiFace - Raspberry Pi IO expansion board",						"PiFace" },
+	{ HTYPE_S0SmartMeterUSB, "S0 Meter USB",										"S0 Meter" },
+	{ HTYPE_OpenThermGateway, "OpenTherm Gateway USB",								"OpenTherm" },
+	{ HTYPE_TeleinfoMeter, "Teleinfo EDF",											"TeleInfo" },
+	{ HTYPE_OpenThermGatewayTCP, "OpenTherm Gateway with LAN interface",			"OpenTherm" },
+	{ HTYPE_OpenZWave, "OpenZWave USB",												"OpenZWave" },
+	{ HTYPE_LimitlessLights, "Limitless/AppLamp/Mi Light with LAN/WiFi interface",	"Limitless" },
+	{ HTYPE_System, "Motherboard sensors",											"HardwareMonitor" },
+	{ HTYPE_EnOceanESP2, "EnOcean USB (ESP2)",										"EnOcean" },
+	{ HTYPE_SolarEdgeTCP, "SolarEdge via LAN interface",							"SolarEdge" },
+	{ HTYPE_SBFSpot, "SBFSpot (SMA)",												"SBFSpot" },
+	{ HTYPE_ICYTHERMOSTAT, "ICY Thermostat",										"ICY" },
+	{ HTYPE_WOL, "Wake-on-LAN",														"WOL" },
+	{ HTYPE_PVOUTPUT_INPUT, "PVOutput (Input)",										"PVOutput" },
+	{ HTYPE_EnOceanESP3, "EnOcean USB (ESP3)",										"EnOcean" },
+	{ HTYPE_RaspberryGPIO, "Raspberry's GPIO port",									"GPIO" },
+	{ HTYPE_Meteostick, "Meteostick USB",											"Meteostick" },
+	{ HTYPE_TOONTHERMOSTAT, "Toon Thermostat",										"Toon" },
+	{ HTYPE_ECODEVICES, "Eco Devices",												"Eco" },
+	{ HTYPE_HARMONY_HUB, "Logitech Harmony Hub",									"Harmony" },
+	{ HTYPE_Mochad, "Mochad CM15Pro/CM19A bridge with LAN interface",				"Mochad" },
+	{ HTYPE_Philips_Hue, "Philips Hue Bridge",										"Philips Hue" },
+	{ HTYPE_EVOHOME_SERIAL, "Evohome USB (for HGI/S80)",							"EvoHome" },
+	{ HTYPE_EVOHOME_SCRIPT, "Evohome via script",									"EvoHome" },
+	{ HTYPE_EVOHOME_WEB, "Evohome via Web API",										"EvoHome" },
+	{ HTYPE_EVOHOME_TCP, "Evohome via LAN (remote HGI/S80)",						"EvoHome" },
+	{ HTYPE_MySensorsUSB, "MySensors Gateway USB",									"MySensors" },
+	{ HTYPE_MySensorsTCP, "MySensors Gateway with LAN interface",					"MySensors" },
+	{ HTYPE_MySensorsMQTT, "MySensors Gateway with MQTT interface",					"MySensors" },
+	{ HTYPE_MQTT, "MQTT Client Gateway with LAN interface",							"MQTT" },
+	{ HTYPE_FRITZBOX, "Fritzbox Callmonitor via LAN interface",						"Fritzbox" },
+	{ HTYPE_ETH8020, "ETH8020 Relay board with LAN interface",						"ETh8020" },
+	{ HTYPE_RFLINKUSB, "RFLink Gateway USB",										"RFLink" },
+	{ HTYPE_KMTronicUSB, "KMTronic Gateway USB",									"KMTronic" },
+	{ HTYPE_KMTronicTCP, "KMTronic Gateway with LAN interface",						"KMTronic" },
+	{ HTYPE_SOLARMAXTCP, "SolarMax via LAN interface",								"SolarMax" },
+	{ HTYPE_KMTronic433, "KMTronic 433MHz Gateway USB",								"KMTronic" },
+	{ HTYPE_Pinger, "System Alive Checker (Ping)",									"Pinger" },
+	{ HTYPE_NEST, "Nest Thermostat/Protect",										"Nest" },
+	{ HTYPE_Nest_OAuthAPI, "Nest Thermostat/Protect OAuth",							"Nest" },
+	{ HTYPE_THERMOSMART, "Thermosmart Thermostat",									"ThermoSmart" },
+	{ HTYPE_Netatmo, "Netatmo",														"Netatmo" },
+	{ HTYPE_Kodi, "Kodi Media Server",												"Kodi" },
+	{ HTYPE_PanasonicTV, "PanasonicTV",												"PanasonicTV" },
+	{ HTYPE_ANNATHERMOSTAT, "Plugwise Anna Thermostat via LAN interface",			"Plugwise" },
+	{ HTYPE_SatelIntegra, "Satel Integra via LAN interface",						"Satel Inegra" },
+	{ HTYPE_LogitechMediaServer, "Logitech Media Server",							"Logitech Media Server" },
+	{ HTYPE_RFXtrx868, "RFXCOM - RFXtrx868 USB 868MHz Transceiver",					"RFXCom 868" },
+	{ HTYPE_RFLINKTCP, "RFLink Gateway with LAN interface",							"RFLink" },
+	{ HTYPE_Comm5TCP, "Comm5 MA-5XXX with LAN interface",							"Comm5" },
+	{ HTYPE_Comm5SMTCP, "Comm5 SM-XXXX with LAN interface",							"Comm5" },
+	{ HTYPE_Comm5Serial, "Comm5 MA-4XXX/MI-XXXX Serial/USB interface",				"Comm5" },
+	{ HTYPE_SolarEdgeAPI , "SolarEdge via Web API",									"SolarEdge" },
+	{ HTYPE_CurrentCostMeter, "CurrentCost Meter USB",								"CurrentCost" },
+	{ HTYPE_CurrentCostMeterLAN, "CurrentCost Meter with LAN interface",			"CurrentCost" },
+	{ HTYPE_DomoticzInternal, "Domoticz Internal interface",						"Domoticz" },
+	{ HTYPE_NefitEastLAN, "Nefit Easy HTTP server over LAN interface",				"Nefit" },
+	{ HTYPE_OpenWebNetTCP, "MyHome OpenWebNet with LAN interface",					"MyHome" },
+	{ HTYPE_RaspberryHTU21D, "I2C sensor HTU21D(F)/SI702x Temp+Humidity",			"I2C HTU21D" },
+	{ HTYPE_AtagOne, "Atag One Thermostat",											"Atag" },
+	{ HTYPE_Sterbox, "Sterbox v2-3 PLC with LAN interface",							"Sterbox" },
+	{ HTYPE_HTTPPOLLER, "HTTP/HTTPS poller",										"HTTP(S) Poller" },
+	{ HTYPE_RAVEn, "Rainforest RAVEn USB",											"Rainforest" },
+	{ HTYPE_S0SmartMeterTCP, "S0 Meter with LAN interface",							"S0 Meter" },
+	{ HTYPE_RESERVED_FOR_YOU_1, "",													"" },
+	{ HTYPE_AccuWeather, "AccuWeather (Weather Lookup)",							"AccuWeather" },
+	{ HTYPE_BleBox, "BleBox devices",												"BleBox" },
+	{ HTYPE_Ec3kMeterTCP, "Energy Count 3000/ NETBSEM4/ La Crosse RT-10 LAN",		"Ec3kMeter" },
+	{ HTYPE_OpenWeatherMap, "Open Weather Map",										"OpenWeatherMap" },
+	{ HTYPE_GoodweAPI, "Goodwe solar inverter via Web API",							"Goodwe" },
+	{ HTYPE_RaspberryTSL2561, "I2C sensor TSL2561 Illuminance",						"I2C TSL2561" },
+	{ HTYPE_Daikin, "Daikin Airconditioning with LAN (HTTP) interface",				"Daikin" },
+	{ HTYPE_HEOS, "HEOS by DENON",													"HEOS" },
+	{ HTYPE_MultiFun, "MultiFun LAN",												"Multifun" },
+	{ HTYPE_ZIBLUEUSB, "ZiBlue RFPlayer USB",										"ZiBlue" },
+	{ HTYPE_ZIBLUETCP, "ZiBlue RFPlayer with LAN interface",						"ZiBlue" },
+	{ HTYPE_Yeelight, "YeeLight LED",												"YeeLight" },
+	{ HTYPE_RaspberryPCF8574, "I2C sensor PIO 8bit expander PCF8574(A)",			"I2C PCF8574" },
+	{ HTYPE_PythonPlugin, "Python Plugin System",									"Python Plugin System" },
+	{ HTYPE_XiaomiGateway, "Xiaomi Gateway",										"Xiaomi" },
+	{ HTYPE_RaspberryBME280, "I2C sensor BME280 Temp+Hum+Baro",						"I2C BME" },
+	{ HTYPE_Arilux, "Arilux AL-LC0x",												"Arilux" },
+	{ HTYPE_OpenWebNetUSB, "MyHome OpenWebNet USB",									"MyHome" },
+	{ HTYPE_IntergasInComfortLAN2RF, "Intergas InComfort LAN2RF Gateway",			"InComfort" },
+	{ HTYPE_RelayNet, "Relay-Net 8 channel LAN Relay and binary Input module",		"Relay-Net" },
+	{ HTYPE_KMTronicUDP, "KMTronic Gateway with LAN/UDP interface",					"KMTronic" },
+	{ HTYPE_SysfsGpio, "Generic sysfs GPIO",										"sysfs" },
+	{ HTYPE_Rtl433, "Rtl433 RTL-SDR receiver",										"RTL433" },
+	{ HTYPE_OnkyoAVTCP, "Onkyo AV Receiver (LAN)",									"Onkyo AV" },
+	{ HTYPE_RESERVED_FOR_YOU_2, "",													"" },
+	{ HTYPE_USBtinGateway, "USBtin Can Gateway",									"USBtin" },
+	{ HTYPE_EnphaseAPI, "Enphase Envoy with LAN (HTTP) interface",					"Enphase" },
+	{ HTYPE_RaspberryMCP23017, "I2C sensor GPIO 16bit expander MCP23017",			"I2C GPIO" },
+	{ HTYPE_eHouseTCP, "eHouse UDP+TCP with LAN interface",							"eHouse" },
+	{ HTYPE_EcoCompteur, "EcoCompteur Legrand with LAN interface",					"EcoCompteur" },
+	{ HTYPE_Honeywell, "Honeywell Thermostat",										"Honeywell" },
+	{ HTYPE_Tado, "Tado Thermostat",												"Tado" },
+	{ HTYPE_DenkoviHTTPDevices, "Denkovi Modules with LAN (HTTP) Interface",		"Denkovi" },
+	{ HTYPE_DenkoviUSBDevices, "Denkovi Modules with USB Interface",				"Denkovi" },
+	{ HTYPE_DenkoviTCPDevices, "Denkovi Modules with LAN (TCP) Interface",			"Denkovi" },
+	{ HTYPE_IHC, "LK IHC Controller",                                               "LKIHC" },
+	{ 0, NULL, NULL }
+};
+
 const char *Hardware_Type_Desc(int hType)
 {
-	static const STR_TABLE_SINGLE	Table[] =
-	{
-		{ HTYPE_RFXtrx315, "RFXCOM - RFXtrx315 USB 315MHz Transceiver" },
-	{ HTYPE_RFXtrx433, "RFXCOM - RFXtrx433 USB 433.92MHz Transceiver" },
-	{ HTYPE_RFXLAN, "RFXCOM - RFXtrx shared over LAN interface" },
-	{ HTYPE_Domoticz, "Domoticz - Remote Server" },
-	{ HTYPE_P1SmartMeter, "P1 Smart Meter USB" },
-	{ HTYPE_P1SmartMeterLAN, "P1 Smart Meter with LAN interface" },
-	{ HTYPE_YouLess, "YouLess Meter with LAN interface" },
-	{ HTYPE_WINDDELEN, "Winddelen" },
-	{ HTYPE_TE923, "TE923 USB Compatible Weather Station" },
-	{ HTYPE_Rego6XX, "Rego 6XX USB/serial interface" },
-	{ HTYPE_FreeToUse, "Can be used for a feature hardware class" },
-	{ HTYPE_DavisVantage, "Davis Vantage Weather Station USB" },
-	{ HTYPE_VOLCRAFTCO20, "Volcraft CO-20 USB air quality sensor" },
-	{ HTYPE_1WIRE, "1-Wire (System)" },
-	{ HTYPE_RaspberryBMP085, "I2C sensor BMP085/180 Temp+Baro" },
-	{ HTYPE_Wunderground, "Weather Underground" },
-	{ HTYPE_DarkSky, "DarkSky (Weather Lookup)" },
-	{ HTYPE_Dummy, "Dummy (Does nothing, use for virtual switches only)" },
-	{ HTYPE_Tellstick, "Tellstick" },
-	{ HTYPE_PiFace, "PiFace - Raspberry Pi IO expansion board" },
-	{ HTYPE_S0SmartMeterUSB, "S0 Meter USB" },
-	{ HTYPE_OpenThermGateway, "OpenTherm Gateway USB" },
-	{ HTYPE_TeleinfoMeter, "Teleinfo EDF" },
-	{ HTYPE_OpenThermGatewayTCP, "OpenTherm Gateway with LAN interface" },
-	{ HTYPE_OpenZWave, "OpenZWave USB" },
-	{ HTYPE_LimitlessLights, "Limitless/AppLamp/Mi Light with LAN/WiFi interface" },
-	{ HTYPE_System, "Motherboard sensors" },
-	{ HTYPE_EnOceanESP2, "EnOcean USB (ESP2)" },
-	{ HTYPE_SolarEdgeTCP, "SolarEdge via LAN interface" },
-	{ HTYPE_SBFSpot, "SBFSpot (SMA)" },
-	{ HTYPE_ICYTHERMOSTAT, "ICY Thermostat" },
-	{ HTYPE_WOL, "Wake-on-LAN" },
-	{ HTYPE_PVOUTPUT_INPUT, "PVOutput (Input)" },
-	{ HTYPE_EnOceanESP3, "EnOcean USB (ESP3)" },
-	{ HTYPE_RaspberryGPIO, "Raspberry's GPIO port" },
-	{ HTYPE_Meteostick, "Meteostick USB" },
-	{ HTYPE_TOONTHERMOSTAT, "Toon Thermostat" },
-	{ HTYPE_ECODEVICES, "Eco Devices" },
-	{ HTYPE_HARMONY_HUB, "Logitech Harmony Hub" },
-	{ HTYPE_Mochad, "Mochad CM15Pro/CM19A bridge with LAN interface" },
-	{ HTYPE_Philips_Hue, "Philips Hue Bridge" },
-	{ HTYPE_EVOHOME_SERIAL, "Evohome USB (for HGI/S80)" },
-	{ HTYPE_EVOHOME_SCRIPT, "Evohome via script" },
-	{ HTYPE_EVOHOME_WEB, "Evohome via Web API" },
-	{ HTYPE_EVOHOME_TCP, "Evohome via LAN (remote HGI/S80)" },
-	{ HTYPE_MySensorsUSB, "MySensors Gateway USB" },
-	{ HTYPE_MySensorsTCP, "MySensors Gateway with LAN interface" },
-	{ HTYPE_MySensorsMQTT, "MySensors Gateway with MQTT interface" },
-	{ HTYPE_MQTT, "MQTT Client Gateway with LAN interface" },
-	{ HTYPE_FRITZBOX, "Fritzbox Callmonitor via LAN interface" },
-	{ HTYPE_ETH8020, "ETH8020 Relay board with LAN interface" },
-	{ HTYPE_RFLINKUSB, "RFLink Gateway USB" },
-	{ HTYPE_KMTronicUSB, "KMTronic Gateway USB" },
-	{ HTYPE_KMTronicTCP, "KMTronic Gateway with LAN interface" },
-	{ HTYPE_SOLARMAXTCP, "SolarMax via LAN interface" },
-	{ HTYPE_KMTronic433, "KMTronic 433MHz Gateway USB" },
-	{ HTYPE_Pinger, "System Alive Checker (Ping)" },
-	{ HTYPE_NEST, "Nest Thermostat/Protect" },
-	{ HTYPE_Nest_OAuthAPI, "Nest Thermostat/Protect OAuth" },
-	{ HTYPE_THERMOSMART, "Thermosmart Thermostat" },
-	{ HTYPE_Netatmo, "Netatmo" },
-	{ HTYPE_Kodi, "Kodi Media Server" },
-	{ HTYPE_PanasonicTV, "PanasonicTV" },
-	{ HTYPE_ANNATHERMOSTAT, "Plugwise Anna Thermostat via LAN interface" },
-	{ HTYPE_SatelIntegra, "Satel Integra via LAN interface" },
-	{ HTYPE_LogitechMediaServer, "Logitech Media Server" },
-	{ HTYPE_RFXtrx868, "RFXCOM - RFXtrx868 USB 868MHz Transceiver" },
-	{ HTYPE_RFLINKTCP, "RFLink Gateway with LAN interface" },
-	{ HTYPE_Comm5TCP, "Comm5 MA-5XXX with LAN interface" },
-	{ HTYPE_Comm5SMTCP, "Comm5 SM-XXXX with LAN interface" },
-	{ HTYPE_Comm5Serial, "Comm5 MA-4XXX/MI-XXXX Serial/USB interface" },
-	{ HTYPE_SolarEdgeAPI , "SolarEdge via Web API" },
-	{ HTYPE_CurrentCostMeter, "CurrentCost Meter USB" },
-	{ HTYPE_CurrentCostMeterLAN, "CurrentCost Meter with LAN interface" },
-	{ HTYPE_DomoticzInternal, "Domoticz Internal interface" },
-	{ HTYPE_NefitEastLAN, "Nefit Easy HTTP server over LAN interface" },
-	{ HTYPE_OpenWebNetTCP, "MyHome OpenWebNet with LAN interface" },
-	{ HTYPE_RaspberryHTU21D, "I2C sensor HTU21D(F)/SI702x Humidity+Temp" },
-	{ HTYPE_AtagOne, "Atag One Thermostat" },
-	{ HTYPE_Sterbox, "Sterbox v2-3 PLC with LAN interface" },
-	{ HTYPE_HTTPPOLLER, "HTTP/HTTPS poller" },
-	{ HTYPE_RAVEn, "Rainforest RAVEn USB" },
-	{ HTYPE_S0SmartMeterTCP, "S0 Meter with LAN interface" },
-	{ HTYPE_RESERVED_FOR_YOU_1, "" },
-	{ HTYPE_AccuWeather, "AccuWeather (Weather Lookup)" },
-	{ HTYPE_BleBox, "BleBox devices" },
-	{ HTYPE_Ec3kMeterTCP, "Energy Count 3000/ NETBSEM4/ La Crosse RT-10 LAN" },
-	{ HTYPE_OpenWeatherMap, "Open Weather Map" },
-	{ HTYPE_GoodweAPI, "Goodwe solar inverter via Web API" },
-	{ HTYPE_RaspberryTSL2561, "I2C sensor TSL2561 Illuminance" },
-	{ HTYPE_Daikin, "Daikin Airconditioning with LAN (HTTP) interface" },
-	{ HTYPE_HEOS, "HEOS by DENON" },
-	{ HTYPE_MultiFun, "MultiFun LAN" },
-	{ HTYPE_ZIBLUEUSB, "ZiBlue RFPlayer USB" },
-	{ HTYPE_ZIBLUETCP, "ZiBlue RFPlayer with LAN interface" },
-	{ HTYPE_Yeelight, "YeeLight LED" },
-	{ HTYPE_RaspberryPCF8574, "I2C sensor PIO 8bit expander PCF8574 or PCF8574A" },
-	{ HTYPE_PythonPlugin, "Python Plugin System" },
-	{ HTYPE_XiaomiGateway, "Xiaomi Gateway" },
-	{ HTYPE_RaspberryBME280, "I2C sensor BME280 Temp+Hum+Baro" },
-	{ HTYPE_Arilux, "Arilux AL-LC0x" },
-	{ HTYPE_OpenWebNetUSB, "MyHome OpenWebNet USB" },
-	{ HTYPE_IntergasInComfortLAN2RF, "Intergas InComfort LAN2RF Gateway" },
-	{ HTYPE_RelayNet, "Relay-Net 8 channel LAN Relay and binary Input module" },
-	{ HTYPE_KMTronicUDP, "KMTronic Gateway with LAN/UDP interface" },
-	{ HTYPE_SysfsGpio, "Generic sysfs GPIO" },
-	{ HTYPE_Rtl433, "Rtl433 RTL-SDR receiver" },
-	{ HTYPE_OnkyoAVTCP, "Onkyo AV Receiver (LAN)" },
-	{ HTYPE_RESERVED_FOR_YOU_2, "" },
-	{ HTYPE_USBtinGateway, "USBtin Can Gateway" },
-	{ HTYPE_EnphaseAPI, "Enphase Envoy with LAN (HTTP) interface" },
-	{ HTYPE_RaspberryMCP23017, "I2C sensor GPIO 16bit expander MCP23017" },
-	{ HTYPE_eHouseTCP, "eHouse UDP+TCP with LAN interface" },
-	{ HTYPE_EcoCompteur, "EcoCompteur Legrand with LAN interface" },
-	{ HTYPE_Honeywell, "Honeywell Thermostat" },
-	{ HTYPE_Tado, "Tado Thermostat" },
-	{ HTYPE_DenkoviHTTPDevices, "Denkovi Modules with LAN (HTTP) Interface" },
-	{ HTYPE_DenkoviUSBDevices, "Denkovi Modules with USB Interface" },
-	{ HTYPE_DenkoviTCPDevices, "Denkovi Modules with LAN/WiFi (TCP) Interface" },
-	{ HTYPE_IHC, "LK IHC Controller" },
-	{ 0, NULL, NULL }
-	};
-	return findTableIDSingle1(Table, hType);
+	return findTableIDSingle1(HardwareTypeTable, hType);
+}
+
+const char *Hardware_Short_Desc(int hType)
+{
+	return findTableIDSingle2(HardwareTypeTable, hType);
 }
 
 const char *Switch_Type_Desc(const _eSwitchType sType)
@@ -523,6 +530,8 @@ const char *RFX_Type_Desc(const unsigned char i, const unsigned char snum)
 	{ pTypeEvohomeWater, "Heating" , "evohome" },
 	{ pTypeEvohomeRelay, "Heating" , "evohome" },
 	{ pTypeGeneralSwitch, "Light/Switch", "lightbulb" },
+	{ pTypeWEATHER, "Weather" , "weather" },
+	{ pTypeSOLAR, "Solar" , "solar" },
 	{ 0, NULL, NULL }
 	};
 	if (snum == 1)
@@ -567,7 +576,6 @@ const char *RFX_Type_SubType_Desc(const unsigned char dType, const unsigned char
 	{ pTypeTEMP_HUM, sTypeTH14, "Alecto" },
 	{ pTypeTEMP_HUM, sTypeTH_LC_TC, "LaCrosse TX3" },
 
-
 	{ pTypeTEMP_HUM_BARO, sTypeTHB1, "THB1 - BTHR918, BTHGN129" },
 	{ pTypeTEMP_HUM_BARO, sTypeTHB2, "THB2 - BTHR918N, BTHR968" },
 	{ pTypeTEMP_HUM_BARO, sTypeTHBFloat, "Weather Station" },
@@ -580,7 +588,6 @@ const char *RFX_Type_SubType_Desc(const unsigned char dType, const unsigned char
 	{ pTypeRAIN, sTypeRAIN6, "LaCrosse TX5" },
 	{ pTypeRAIN, sTypeRAIN7, "Alecto" },
 	{ pTypeRAIN, sTypeRAIN8, "Davis" },
-	{ pTypeRAIN, sTypeRAIN9, "Alecto WCH2010" },
 	{ pTypeRAIN, sTypeRAINWU, "WWW" },
 
 	{ pTypeWIND, sTypeWIND1, "WTGR800" },
@@ -590,12 +597,17 @@ const char *RFX_Type_SubType_Desc(const unsigned char dType, const unsigned char
 	{ pTypeWIND, sTypeWIND5, "UPM WDS500" },
 	{ pTypeWIND, sTypeWIND6, "LaCrosse WS2300" },
 	{ pTypeWIND, sTypeWIND7, "Alecto WS4500" },
-	{ pTypeWIND, sTypeWIND8, "Alecto ACH2010" },
 	{ pTypeWIND, sTypeWINDNoTemp, "Weather Station" },
+	{ pTypeWIND, sTypeWINDNoTempNoChill, "Wind" },
 
 	{ pTypeUV, sTypeUV1, "UVN128,UV138" },
 	{ pTypeUV, sTypeUV2, "UVN800" },
 	{ pTypeUV, sTypeUV3, "TFA" },
+
+	{ pTypeWEATHER, sTypeWEATHER1, "Alecto ACH2010" },
+	{ pTypeWEATHER, sTypeWEATHER2, "Alecto WS5500" },
+
+	{ pTypeSOLAR, sTypeSOLAR1, "Davis" },
 
 	{ pTypeLighting1, sTypeX10, "X10" },
 	{ pTypeLighting1, sTypeARC, "ARC" },
@@ -629,7 +641,7 @@ const char *RFX_Type_SubType_Desc(const unsigned char dType, const unsigned char
 	{ pTypeLighting5, sTypeTRC02_2, "TRC02_2 (RGB)" },
 	{ pTypeLighting5, sTypeAoke, "Aoke" },
 	{ pTypeLighting5, sTypeEurodomest, "Eurodomest" },
-	{ pTypeLighting5, sTypeLivoloAppliance, "Livolo" },
+	{ pTypeLighting5, sTypeLivolo1to10, "Livolo 1 to 10" },
 	{ pTypeLighting5, sTypeRGB432W, "RGB432W" },
 	{ pTypeLighting5, sTypeMDREMOTE107, "MDRemote 107" },
 	{ pTypeLighting5, sTypeLegrandCAD, "Legrand CAD" },
@@ -659,6 +671,8 @@ const char *RFX_Type_SubType_Desc(const unsigned char dType, const unsigned char
 	{ pTypeBlinds, sTypeBlindsT12, "Confexx" },
 	{ pTypeBlinds, sTypeBlindsT13, "Screenline" },
 	{ pTypeBlinds, sTypeBlindsT14, "Hualite" },
+	{ pTypeBlinds, sTypeBlindsT15, "RFU" },
+	{ pTypeBlinds, sTypeBlindsT16, "Zemismart" },
 
 	{ pTypeSecurity1, sTypeSecX10, "X10 security" },
 	{ pTypeSecurity1, sTypeSecX10M, "X10 security motion" },
@@ -769,8 +783,9 @@ const char *RFX_Type_SubType_Desc(const unsigned char dType, const unsigned char
 	{ pTypeChime, sTypeByronSX, "ByronSX" },
 	{ pTypeChime, sTypeByronMP001, "Byron MP001" },
 	{ pTypeChime, sTypeSelectPlus, "SelectPlus" },
-	{ pTypeChime, sTypeSelectPlus3, "SelectPlus3" },
+	{ pTypeChime, sTypeByronBY, "SelectPlus3" },
 	{ pTypeChime, sTypeEnvivo, "Envivo" },
+	{ pTypeChime, sTypeAlfawise, "Alfawise" },
 
 	{ pTypeFan, sTypeSiemensSF01 , "Siemens SF01" },
 	{ pTypeFan, sTypeItho , "Itho CVE RFT" },
@@ -780,6 +795,8 @@ const char *RFX_Type_SubType_Desc(const unsigned char dType, const unsigned char
 	{ pTypeFan, sTypeLucciAirDC, "Lucci Air DC" },
 	{ pTypeFan, sTypeCasafan, "Casafan" },
 	{ pTypeFan, sTypeFT1211R, "FT1211R" },
+	{ pTypeFan, sTypeFalmec, "Falmec" },
+	{ pTypeFan, sTypeLucciAirDCII, "Lucci Air DC II" },
 
 	{ pTypeTEMP_RAIN, sTypeTR1, "Alecto WS1200" },
 
@@ -809,6 +826,11 @@ const char *RFX_Type_SubType_Desc(const unsigned char dType, const unsigned char
 	{ pTypeFS20, sTypeFS20, "FS20" },
 	{ pTypeFS20, sTypeFHT8V, "FHT 8V valve" },
 	{ pTypeFS20, sTypeFHT80, "FHT80 door/window sensor" },
+
+	{ pTypeWEATHER, sTypeWEATHER1, "Alecto ACH2010" },
+	{ pTypeWEATHER, sTypeWEATHER2, "Alecto WS5500" },
+
+	{ pTypeSOLAR, sTypeSOLAR1, "Davis" },
 
 	{ pTypeGeneralSwitch, sSwitchTypeX10, "X10" },
 	{ pTypeGeneralSwitch, sSwitchTypeARC, "ARC" },
@@ -1302,7 +1324,7 @@ void GetLightStatus(
 				break;
 			}
 			break;
-		case sTypeLivoloAppliance:
+		case sTypeLivolo1to10:
 			bHaveGroupCmd = true;
 			switch (nValue)
 			{
@@ -1622,7 +1644,11 @@ void GetLightStatus(
 			lstatus = "On";
 			break;
 		case Color_SetBrightnessLevel:
-			lstatus = "Set Level";
+			sprintf(szTmp, "Set Level: %d %%", llevel);
+			if (sValue != "0")
+				lstatus = szTmp;
+			else
+				lstatus = "Off";
 			break;
 		case Color_SetColorToWhite:
 			lstatus = "Set to White";
@@ -2041,6 +2067,7 @@ void GetLightStatus(
 		}
 		break;
 		case sTypeLucciAir:
+		case sTypeWestinghouse:
 		{
 			switch (nValue)
 			{
@@ -3449,6 +3476,7 @@ bool GetLightCommand(
 		}
 		break;
 		case sTypeLucciAir:
+		case sTypeWestinghouse:
 		{
 			if (switchcmd == "hi")
 			{
@@ -3509,6 +3537,7 @@ bool IsLightSwitchOn(const std::string &lstatus)
 		(lstatus == "Panic") ||
 		(lstatus == "Light On") ||
 		(lstatus == "Light 2 On") ||
+		(lstatus == "Set Color") ||
 		(lstatus == "Open inline relay") ||
 		(lstatus.find("Set Level") != std::string::npos) ||
 		(lstatus.find("Set Group Level") != std::string::npos) ||
@@ -3615,6 +3644,7 @@ bool IsNetworkDevice(const _eHardwareTypes htype)
 	case HTYPE_ZIBLUETCP:
 	case HTYPE_OnkyoAVTCP:
 	case HTYPE_eHouseTCP:
+	case HTYPE_TTN_MQTT:
 		return true;
 	default:
 		return false;
@@ -3653,7 +3683,7 @@ void ConvertToGeneralSwitchType(std::string &devid, int &dtype, int &subtype)
 		if (subtype == sTypeEMW100) { subtype = sSwitchTypeEMW100; devid = "00" + devid; }
 		if (subtype == sTypeLivolo) { subtype = sSwitchTypeLivolo; devid = "00" + devid; }
 		if (subtype == sTypeLightwaveRF) { subtype = sSwitchTypeLightwaveRF; devid = "00" + devid; }
-		if (subtype == sTypeLivoloAppliance) { subtype = sSwitchTypeLivoloAppliance; devid = "00" + devid; }
+		if (subtype == sTypeLivolo1to10) { subtype = sSwitchTypeLivoloAppliance; devid = "00" + devid; }
 		if (subtype == sTypeEurodomest) subtype = sSwitchTypeEurodomest;
 	}
 	else if (dtype == pTypeLighting6) {
@@ -3664,7 +3694,7 @@ void ConvertToGeneralSwitchType(std::string &devid, int &dtype, int &subtype)
 		dtype = pTypeGeneralSwitch;
 		if (subtype == sTypeByronSX) subtype = sSwitchTypeByronSX;
 		if (subtype == sTypeSelectPlus) subtype = sSwitchTypeSelectPlus;
-		if (subtype == sTypeSelectPlus3) subtype = sSwitchTypeSelectPlus3;
+		if (subtype == sTypeByronBY) subtype = sSwitchTypeSelectPlus3;
 		if (subtype == sTypeByronMP001) subtype = sSwitchTypeByronMP001;
 	}
 	else if (dtype == pTypeSecurity1) {

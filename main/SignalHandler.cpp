@@ -26,6 +26,8 @@
 
 #include "SignalHandler.h"
 
+#define Heartbeat_Timeout 300 //5 minutes
+
 extern MainWorker m_mainworker;
 
 extern std::string logfile;
@@ -36,47 +38,22 @@ extern bool g_bRunAsDaemon;
 extern time_t m_LastHeartbeat;
 
 #if defined(__linux__)
-static int IsDebuggerPresent(void)
-{
-	char buf[1024];
-	int debugger_present = 0;
-
-	int status_fd = open("/proc/self/status", O_RDONLY);
-	if (status_fd == -1)
-		return 0;
-
-	ssize_t num_read = read(status_fd, buf, sizeof(buf)-1);
-
-	if (num_read > 0)
-	{
-		static const char TracerPid[] = "TracerPid:";
-		char *tracer_pid;
-
-		buf[num_read] = 0;
-		tracer_pid    = strstr(buf, TracerPid);
-		if (tracer_pid)
-			debugger_present = !!atoi(tracer_pid + sizeof(TracerPid) - 1);
-	}
-
-	return debugger_present;
-}
-
-static bool printRegInfo(siginfo_t * info, ucontext_t * ucontext)
+static void printRegInfo(siginfo_t * info, ucontext_t * ucontext)
 {
 #if defined(REG_RIP) //x86_64
-	_log.Log(LOG_ERROR, "siginfo address=%p, address=%p", info->si_addr, ((ucontext_t *)ucontext)->uc_mcontext.gregs[REG_RIP]);
+	_log.Log(LOG_ERROR, "siginfo address=%p, address=%p", info->si_addr, (void*)((ucontext_t *)ucontext)->uc_mcontext.gregs[REG_RIP]);
 #elif defined(REG_EIP) //x86
-	_log.Log(LOG_ERROR, "siginfo address=%p, address=%p", info->si_addr, ((ucontext_t *)ucontext)->uc_mcontext.gregs[REG_EIP]);
+	_log.Log(LOG_ERROR, "siginfo address=%p, address=%p", info->si_addr, (void*)((ucontext_t *)ucontext)->uc_mcontext.gregs[REG_EIP]);
 #elif defined(__aarch64__) //arm64 (aarch64 according to gnu)
-	_log.Log(LOG_ERROR, "siginfo address=%p, address=%p", info->si_addr, ((ucontext_t *)ucontext)->uc_mcontext.regs[30]);
+	_log.Log(LOG_ERROR, "siginfo address=%p, address=%p", info->si_addr, (void*)((ucontext_t *)ucontext)->uc_mcontext.regs[30]);
 #elif defined(__arm__) //arm32
-	_log.Log(LOG_ERROR, "siginfo address=%p, address=%p", info->si_addr, ((ucontext_t *)ucontext)->uc_mcontext.arm_lr);
+	_log.Log(LOG_ERROR, "siginfo address=%p, address=%p", info->si_addr, (void*)((ucontext_t *)ucontext)->uc_mcontext.arm_lr);
 #else // unknown
 	_log.Log(LOG_ERROR, "siginfo address=%p", info->si_addr);
 #endif
 }
 
-static bool printSingleThreadInfo(FILE* f, const char* pattern, bool& foundThread, bool& gdbSuccess)
+static void printSingleThreadInfo(FILE* f, const char* pattern, bool& foundThread, bool& gdbSuccess)
 {
 	char * line = NULL;
 	size_t len = 0;
@@ -105,7 +82,7 @@ static bool printSingleThreadInfo(FILE* f, const char* pattern, bool& foundThrea
 	}
 }
 
-static bool printSingleCallStack(FILE* f, const char* pattern, bool& foundThread, bool& gdbSuccess)
+static void printSingleCallStack(FILE* f, const char* pattern, bool& foundThread, bool& gdbSuccess)
 {
 	char * line = NULL;
 	size_t len = 0;
@@ -298,7 +275,7 @@ static bool dumpstack_gdb(bool printAllThreads) {
 				if (!foundThread)
 				{
 					if (!printAllThreads) _log.Log(LOG_ERROR, "Did not find stack frame for thread %s, printing full gdb output:\n", thread_buf);
-					else _log.Log(LOG_ERROR, "Stack frame for all threads:\n", thread_buf);
+					else _log.Log(LOG_ERROR, "Stack frame for all threads:\n");
 					rewind(f);
 					while ((read = getline(&line, &len, f)) != -1) {
 						if (line[strlen(line) - 1] == '\n') line[strlen(line) - 1] = '\0';
@@ -442,11 +419,17 @@ void signal_handler(int sig_num
 	case SIGABRT:
 	case SIGFPE:
 #if defined(__linux__)
+#if defined(__GLIBC__)
 		pthread_getname_np(pthread_self(), thread_name, sizeof(thread_name));
+#endif
 		tid = syscall(__NR_gettid);
 #endif
 		if (fatal_handling) {
-			_log.Log(LOG_ERROR, "Domoticz(pid:%d, tid:%d('%s')) received fatal signal %d (%s) while backtracing", getpid(), tid, thread_name, sig_num
+#if defined(__GLIBC__)
+			_log.Log(LOG_ERROR, "Domoticz(pid:%d, tid:%ld('%s')) received fatal signal %d (%s) while backtracing", getpid(), tid, thread_name, sig_num
+#else
+			_log.Log(LOG_ERROR, "Domoticz(pid:%d, tid:%ld) received fatal signal %d (%s) while backtracing", getpid(), tid, sig_num
+#endif
 #ifndef WIN32
 				, strsignal(sig_num));
 #else
@@ -473,7 +456,7 @@ void signal_handler(int sig_num
 #ifndef WIN32
 		fatal_handling_thread = pthread_self();
 #endif
-		_log.Log(LOG_ERROR, "Domoticz(pid:%d, tid:%d('%s')) received fatal signal %d (%s)", getpid(), tid, thread_name, sig_num
+		_log.Log(LOG_ERROR, "Domoticz(pid:%d, tid:%ld('%s')) received fatal signal %d (%s)", getpid(), tid, thread_name, sig_num
 #ifndef WIN32
 			, strsignal(sig_num));
 #else
@@ -511,29 +494,31 @@ static void heartbeat_check()
 	mytime(&now);
 
 	double diff = difftime(now, m_mainworker.m_LastHeartbeat);
-	if (diff > 60)
+	if (diff > Heartbeat_Timeout)
 	{
 		_log.Log(LOG_ERROR, "mainworker seems to have ended or hung unexpectedly (last update %f seconds ago)", diff);
-#ifndef _DEBUG
+		if (!IsDebuggerPresent())
+		{
 #ifdef WIN32
-		abort();
+			abort();
 #else
-		raise(SIGUSR1);
+			raise(SIGUSR1);
 #endif
-#endif
+		}
 	}
 
 	diff = difftime(now, m_LastHeartbeat);
-	if (diff > 60)
+	if (diff > Heartbeat_Timeout)
 	{
 		_log.Log(LOG_ERROR, "main thread seems to have ended or hung unexpectedly (last update %f seconds ago)", diff);
-#ifndef _DEBUG
+		if (!IsDebuggerPresent())
+		{
 #ifdef WIN32
-		abort();
+			abort();
 #else
-		raise(SIGUSR1);
+			raise(SIGUSR1);
 #endif
-#endif
+		}
 	}
 }
 

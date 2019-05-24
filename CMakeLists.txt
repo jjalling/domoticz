@@ -125,6 +125,7 @@ ENDIF(USE_BUILTIN_SQLITE)
 
 option(USE_PYTHON "Use Python for Plugins and Event-Scripts" YES)
 IF(USE_PYTHON)
+  find_package(PythonInterp 3.4)
   find_package(PythonLibs 3.4)
   IF(PYTHONLIBS_FOUND)
     MESSAGE(STATUS "Python3 includes found at: ${PYTHON_INCLUDE_PATH}")
@@ -298,6 +299,7 @@ ADD_CUSTOM_COMMAND(TARGET revisiontag COMMAND ${CMAKE_COMMAND}
 set(
 domoticz_SRCS
 main/stdafx.cpp
+main/BaroForecastCalculator.cpp
 main/CmdLine.cpp
 main/Camera.cpp
 main/domoticz.cpp
@@ -317,6 +319,7 @@ main/Scheduler.cpp
 main/SignalHandler.cpp
 main/SQLHelper.cpp
 main/SunRiseSet.cpp
+main/TrendCalculator.cpp
 main/WebServer.cpp
 main/WebServerHelper.cpp
 main/WindCalculation.cpp
@@ -340,6 +343,7 @@ hardware/ASyncSerial.cpp
 hardware/ASyncTCP.cpp
 hardware/AtagOne.cpp
 hardware/BleBox.cpp
+hardware/cayenne_lpp/CayenneLPP_Dec.cpp
 hardware/ColorSwitch.cpp
 hardware/Comm5Serial.cpp
 hardware/Comm5SMTCP.cpp
@@ -457,8 +461,10 @@ hardware/TE923Tool.cpp
 hardware/TeleinfoBase.cpp
 hardware/TeleinfoSerial.cpp
 hardware/Tellstick.cpp
+hardware/TellstickFactory.cpp
 hardware/Thermosmart.cpp
 hardware/ToonThermostat.cpp
+hardware/TTNMQTT.cpp
 hardware/USBtin.cpp
 hardware/USBtin_MultiblocV8.cpp
 hardware/VolcraftCO20.cpp

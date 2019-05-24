@@ -56,6 +56,8 @@ bool IsLightOrSwitch(const int devType, const int subType);
 
 int MStoBeaufort(const float ms);
 
+void FixFolderEnding(std::string &folder);
+
 struct dirent;
 bool dirent_is_directory(const std::string &dir, struct dirent *ent);
 bool dirent_is_file(const std::string &dir, struct dirent *ent);
@@ -76,9 +78,13 @@ uint32_t SystemUptime();
 int GenerateRandomNumber(const int range);
 int GetDirFilesRecursive(const std::string &DirPath, std::map<std::string, int> &_Files);
 
-int SetThreadName(std::thread::native_handle_type thread, const char *name);
+int SetThreadName(const std::thread::native_handle_type &thread, const char *name);
 
+#if !defined(WIN32)
+	bool IsDebuggerPresent(void);
+#endif
 #if defined(__linux__)
 	bool IsWSL(void); //Detects if running under Windows Subsystem for Linux (WSL)
 #endif
 
+std::string GenerateUUID();

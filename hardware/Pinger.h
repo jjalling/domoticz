@@ -23,7 +23,6 @@ public:
 	void RemoveNode(const int ID);
 	void RemoveAllNodes();
 	void SetSettings(const int PollIntervalsec, const int PingTimeoutms);
-	void Restart();
 private:
 	void Do_Work();
 	bool StartHardware() override;
@@ -38,7 +37,6 @@ private:
 	int m_iPingTimeoutms;
 	std::vector<PingNode> m_nodes;
 	std::shared_ptr<std::thread> m_thread;
-	volatile bool m_stoprequested;
 	std::mutex m_mutex;
 };
 

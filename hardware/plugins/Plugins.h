@@ -61,6 +61,7 @@ namespace Plugins {
 		~CPlugin(void);
 
 		int		PollInterval(int Interval = -1);
+		void*	PythonModule() { return m_PyModule; };
 		void	Notifier(std::string Notifier = "");
 		void	AddConnection(CPluginTransport*);
 		void	RemoveConnection(CPluginTransport*);
@@ -83,7 +84,6 @@ namespace Plugins {
 		void	WriteDebugBuffer(const std::vector<byte>& Buffer, bool Incoming);
 
 		bool	WriteToHardware(const char *pdata, const unsigned char length) override;
-		void	Restart();
 		void	SendCommand(const int Unit, const std::string &command, const int level, const _tColor color);
 		void	SendCommand(const int Unit, const std::string &command, const float level);
 
@@ -98,14 +98,11 @@ namespace Plugins {
 		bool	HasNodeFailed(const int Unit);
 
 		std::string			m_PluginKey;
-		std::string			m_Username;
-		std::string			m_Password;
 		void*				m_DeviceDict;
 		void*				m_ImageDict;
 		void*				m_SettingsDict;
 		std::string			m_HomeFolder;
 		PluginDebugMask		m_bDebug;
-		bool				m_stoprequested;
 		bool				m_bIsStarting;
 		bool				m_bTracing;
 	};

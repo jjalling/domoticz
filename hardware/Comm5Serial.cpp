@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include "Comm5Serial.h"
+#include "../main/Helper.h"
 #include "../main/localtime_r.h"
 #include "../main/Logger.h"
-#include "../main/Helper.h"
 #include "../main/RFXtrx.h"
 
 /*
@@ -16,7 +16,6 @@ Comm5Serial::Comm5Serial(const int ID, const std::string& devname, unsigned int 
 	m_baudRate(baudRate)
 {
 	m_HwdID=ID;
-	m_stoprequested=false;
 	lastKnownSensorState = 0;
 	initSensorData = true;
 	reqState = Idle;
@@ -61,9 +60,10 @@ bool Comm5Serial::WriteToHardware(const char * pdata, const unsigned char /*leng
 
 bool Comm5Serial::StartHardware()
 {
-	m_stoprequested = false;
+	RequestStart();
+
 	m_thread = std::make_shared<std::thread>(&Comm5Serial::Do_Work, this);
-	SetThreadName(m_thread->native_handle(), "Comm5Serial");
+	SetThreadNameInt(m_thread->native_handle());
 
 	//Try to open the Serial Port
 	try
@@ -78,9 +78,9 @@ bool Comm5Serial::StartHardware()
 	}
 	catch (boost::exception & e)
 	{
-		_log.Log(LOG_ERROR,"Comm5 MA-4200: Error opening serial port!");
+		Log(LOG_ERROR,"Error opening serial port!");
 #ifdef _DEBUG
-		_log.Log(LOG_ERROR,"-----------------\n%s\n-----------------",boost::diagnostic_information(e).c_str());
+		Log(LOG_ERROR,"-----------------\n%s\n-----------------",boost::diagnostic_information(e).c_str());
 #else
 		(void)e;
 #endif
@@ -88,7 +88,7 @@ bool Comm5Serial::StartHardware()
 	}
 	catch ( ... )
 	{
-		_log.Log(LOG_ERROR,"Comm5 MA-4200: Error opening serial port!!!");
+		_log.Log(LOG_ERROR,"Error opening serial port!!!");
 		return false;
 	}
 	m_bIsStarted=true;
@@ -100,13 +100,10 @@ bool Comm5Serial::StartHardware()
 
 bool Comm5Serial::StopHardware()
 {
-	terminate();
-	m_stoprequested = true;
 	if (m_thread)
 	{
+		RequestStop();
 		m_thread->join();
-		// Wait a while. The read thread might be reading. Adding this prevents a pointer error in the async serial class.
-		sleep_milliseconds(10);
 		m_thread.reset();
 	}
 	m_bIsStarted = false;
@@ -122,17 +119,22 @@ void Comm5Serial::Do_Work()
 	querySensorState();
 	enableNotifications();
 
-	while (!m_stoprequested)
+	Log(LOG_STATUS, "Worker started...");
+
+
+	while (!IsStopRequested(100))
 	{
 		m_LastHeartbeat = mytime(NULL);
-		sleep_milliseconds(40);
-		if (msec_counter++ >= 100) {
+		if (msec_counter++ >= 40) 
+		{
+			//every 4 seconds ?
 			msec_counter = 0;
 			querySensorState();
 		}
 	}
+	terminate();
 
-	_log.Log(LOG_STATUS, "Comm5 MA-42XX: Serial Worker stopped...");
+	Log(LOG_STATUS, "Worker stopped...");
 }
 
 void Comm5Serial::requestDigitalInputResponseHandler(const std::string & mframe)
@@ -172,8 +174,6 @@ void Comm5Serial::enableNotificationResponseHandler(const std::string & /*mframe
 
 void Comm5Serial::readCallBack(const char * data, size_t len)
 {
-	std::lock_guard<std::mutex> l(readQueueMutex);
-
 	if (!m_bEnableReceive)
 		return; //receiving not enabled
 
@@ -213,7 +213,7 @@ void Comm5Serial::ParseData(const unsigned char* data, const size_t len)
 
 			}
 			else {
-				_log.Log(LOG_ERROR, "Comm5 MA-4200: Framing error");
+				Log(LOG_ERROR, "Framing error");
 				currentState = STSTART_OCTET1;
 			}
 			break;
@@ -225,7 +225,7 @@ void Comm5Serial::ParseData(const unsigned char* data, const size_t len)
 				currentState = STFRAME_SIZE;
 			}
 			else {
-				_log.Log(LOG_ERROR, "Comm5 MA-4200: Framing error");
+				Log(LOG_ERROR, "Framing error");
 				currentState = STSTART_OCTET1;
 			}
 			break;
@@ -326,15 +326,9 @@ void Comm5Serial::enableNotifications()
 	writeFrame(data);
 }
 
-void Comm5Serial::OnData(const unsigned char *pData, size_t length)
-{
-	std::lock_guard<std::mutex> l(readQueueMutex);
-	ParseData(pData, length);
-}
-
 void Comm5Serial::OnError(const std::exception e)
 {
-	_log.Log(LOG_ERROR, "Comm5 MA-4200: Error: %s", e.what());
+	Log(LOG_ERROR, "Error: %s", e.what());
 }
 
 
