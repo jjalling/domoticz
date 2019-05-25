@@ -1,4 +1,25 @@
-Version 4.10693 (May 5th 2019)
+Version 4.xxxxx (xxx 2019)
+- Implemented: DarkSky CloudCover sensor
+- Implemented: EventSystem, option in Settings to enable/disable URL call logging containing full URL path
+- Implemented: GUI, OpenZWave added Refresh Node Information button, styling
+- Fixed: GUI, Dashboard icon incremental counter (energy generated) not correct (#3231)
+- Fixed: GUI, device table initial order column
+- Fixed: GUI, Switch Log, date parsing in device log (#3206)
+- Fixed: GUI, Weight Log now displays correct Unit (#3211)
+- Fixed: GUI, OpenZWave Abort Include/Exclude button
+- Fixed: notification, Telegram error when odd number of underscores in text
+- Updated: OpenZWave version 1.6
+- Updated: dzVents (version 2.4.21, See dzVents/documentation/history.md)
+
+Version 4.10717 (May 9th 2019)
+- Fixed: dzVents, Allowing no error message for HTTP calls (#3191)
+- Fixed: EcoCompteur now uses the port specified in the hardware setup (#3184)
+- Fixed: Log for Weight sensor (#3192)
+- Fixed: issue with Session ID/Login
+- Fixed: issue with slightly  to large labels for the selector switch (#3187)
+- Updated: dzVents (version 2.4.19, See dzVents/documentation/history.md)
+
+Version 4.10658 (May 5th 2019)
 - Implemented: [BleBox] Add support for airSensor and use the newest api for shutterBox
 - Implemented: Alecto WS5500 implemented (pTypeWeather)
 - Implemented: Anna Thermostat Added ability to select presets on the Anna via selector switch. Added ability to update the state of the proximity switch in the Anna thermostat.
