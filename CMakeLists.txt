@@ -591,7 +591,7 @@ else(USE_STATIC_BOOST)
    message(STATUS "Linking against boost dynamic libraries")
 endif(USE_STATIC_BOOST)
 
-find_package(Boost REQUIRED COMPONENTS thread system)
+find_package(Boost REQUIRED COMPONENTS thread system iostreams)
 target_link_libraries(domoticz Boost::thread Boost::system Boost::iostreams)
 
 # compare found vs required libBoost version
